@@ -1,24 +1,26 @@
-import React, { useEffect, useState } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
-import { useGeolocation } from '@/hooks/useGeolocation';
-import { usePoliceStations, PoliceStation } from '@/hooks/usePoliceStations';
-import StationCard from './StationCard';
-import { Loader2, MapPin, RefreshCw } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import React, { useEffect, useRef, useState } from "react";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
+import { useGeolocation } from "@/hooks/useGeolocation";
+import { usePoliceStations, PoliceStation } from "@/hooks/usePoliceStations";
+import StationCard from "./StationCard";
+import { Loader2, MapPin, RefreshCw } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 // Fix for default marker icons in webpack/vite
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
-  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+  iconRetinaUrl:
+    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
+  iconUrl:
+    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
+  shadowUrl:
+    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
 });
 
 // Custom user location marker (pink)
 const userIcon = L.divIcon({
-  className: 'custom-user-marker',
+  className: "custom-user-marker",
   html: `
     <div style="
       width: 24px;
@@ -35,7 +37,7 @@ const userIcon = L.divIcon({
 
 // Custom police station marker (shield icon)
 const policeIcon = L.divIcon({
-  className: 'custom-police-marker',
+  className: "custom-police-marker",
   html: `
     <div style="
       width: 36px;
@@ -57,21 +59,22 @@ const policeIcon = L.divIcon({
   iconAnchor: [18, 36],
 });
 
-// Component to recenter map when position changes
-const MapRecenter: React.FC<{ lat: number; lng: number }> = ({ lat, lng }) => {
-  const map = useMap();
-  
-  useEffect(() => {
-    map.setView([lat, lng], 14);
-  }, [lat, lng, map]);
-  
-  return null;
-};
-
 const MapComponent: React.FC = () => {
-  const { position, loading: geoLoading, error: geoError, refresh: refreshLocation } = useGeolocation();
-  const { stations, loading: stationsLoading, fetchStations } = usePoliceStations();
-  const [selectedStation, setSelectedStation] = useState<PoliceStation | null>(null);
+  const {
+    position,
+    loading: geoLoading,
+    error: geoError,
+    refresh: refreshLocation,
+  } = useGeolocation();
+  const { stations, loading: stationsLoading, fetchStations } =
+    usePoliceStations();
+  const [selectedStation, setSelectedStation] =
+    useState<PoliceStation | null>(null);
+
+  const mapElRef = useRef<HTMLDivElement | null>(null);
+  const mapRef = useRef<L.Map | null>(null);
+  const userMarkerRef = useRef<L.Marker | null>(null);
+  const stationsLayerRef = useRef<L.LayerGroup | null>(null);
 
   // Fetch police stations when position is available
   useEffect(() => {
@@ -86,6 +89,66 @@ const MapComponent: React.FC = () => {
       fetchStations(position.lat, position.lng, 20);
     }
   };
+
+  // Initialize Leaflet map once
+  useEffect(() => {
+    if (!mapElRef.current || mapRef.current) return;
+
+    const map = L.map(mapElRef.current, {
+      zoomControl: false,
+    });
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution:
+        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    }).addTo(map);
+
+    const stationsLayer = L.layerGroup().addTo(map);
+
+    mapRef.current = map;
+    stationsLayerRef.current = stationsLayer;
+
+    return () => {
+      map.remove();
+      mapRef.current = null;
+      stationsLayerRef.current = null;
+      userMarkerRef.current = null;
+    };
+  }, []);
+
+  // Keep map centered + user marker updated
+  useEffect(() => {
+    if (!position || !mapRef.current) return;
+
+    mapRef.current.setView([position.lat, position.lng], 14);
+
+    if (!userMarkerRef.current) {
+      userMarkerRef.current = L.marker([position.lat, position.lng], {
+        icon: userIcon,
+      })
+        .addTo(mapRef.current)
+        .bindPopup("Você está aqui");
+    } else {
+      userMarkerRef.current.setLatLng([position.lat, position.lng]);
+    }
+  }, [position]);
+
+  // Render station markers
+  useEffect(() => {
+    const layer = stationsLayerRef.current;
+    if (!layer) return;
+
+    layer.clearLayers();
+
+    stations.forEach((station) => {
+      const marker = L.marker([station.lat, station.lng], {
+        icon: policeIcon,
+      });
+
+      marker.on("click", () => setSelectedStation(station));
+      marker.addTo(layer);
+    });
+  }, [stations]);
 
   if (geoLoading) {
     return (
@@ -104,7 +167,8 @@ const MapComponent: React.FC = () => {
         </div>
         <h2 className="font-semibold text-foreground">Localização não disponível</h2>
         <p className="text-muted-foreground text-sm max-w-xs">
-          {geoError || 'Não foi possível obter sua localização. Verifique as permissões do seu navegador.'}
+          {geoError ||
+            "Não foi possível obter sua localização. Verifique as permissões do seu navegador."}
         </p>
         <Button onClick={refreshLocation} variant="outline" className="gap-2">
           <RefreshCw className="w-4 h-4" />
@@ -116,36 +180,7 @@ const MapComponent: React.FC = () => {
 
   return (
     <div className="flex-1 relative">
-      <MapContainer
-        center={[position.lat, position.lng]}
-        zoom={14}
-        className="h-full w-full"
-        zoomControl={false}
-      >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
-        
-        <MapRecenter lat={position.lat} lng={position.lng} />
-        
-        {/* User location marker */}
-        <Marker position={[position.lat, position.lng]} icon={userIcon}>
-          <Popup>Você está aqui</Popup>
-        </Marker>
-        
-        {/* Police station markers */}
-        {stations.map((station) => (
-          <Marker
-            key={station.id}
-            position={[station.lat, station.lng]}
-            icon={policeIcon}
-            eventHandlers={{
-              click: () => setSelectedStation(station),
-            }}
-          />
-        ))}
-      </MapContainer>
+      <div ref={mapElRef} className="h-full w-full" />
 
       {/* Refresh button */}
       <Button
@@ -155,14 +190,17 @@ const MapComponent: React.FC = () => {
         onClick={handleRefresh}
         disabled={stationsLoading}
       >
-        <RefreshCw className={`w-4 h-4 ${stationsLoading ? 'animate-spin' : ''}`} />
+        <RefreshCw
+          className={`w-4 h-4 ${stationsLoading ? "animate-spin" : ""}`}
+        />
       </Button>
 
       {/* Station count badge */}
       {stations.length > 0 && (
         <div className="absolute top-4 left-4 z-[1000] bg-card/95 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-lg border border-border">
           <span className="text-sm font-medium text-foreground">
-            {stations.length} delegacia{stations.length !== 1 ? 's' : ''} encontrada{stations.length !== 1 ? 's' : ''}
+            {stations.length} delegacia{stations.length !== 1 ? "s" : ""} encontrada
+            {stations.length !== 1 ? "s" : ""}
           </span>
         </div>
       )}
@@ -179,3 +217,4 @@ const MapComponent: React.FC = () => {
 };
 
 export default MapComponent;
+
