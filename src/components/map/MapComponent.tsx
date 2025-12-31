@@ -70,6 +70,7 @@ const MapComponent: React.FC = () => {
     usePoliceStations();
   const [selectedStation, setSelectedStation] =
     useState<PoliceStation | null>(null);
+  const [mapReady, setMapReady] = useState(false);
 
   const mapElRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
@@ -103,10 +104,20 @@ const MapComponent: React.FC = () => {
         '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
     }).addTo(map);
 
+    // IMPORTANT: Leaflet only starts loading tiles after it has a view.
+    // Set an initial view immediately to avoid a blank map.
+    map.setView([0, 0], 2);
+
     const stationsLayer = L.layerGroup().addTo(map);
 
     mapRef.current = map;
     stationsLayerRef.current = stationsLayer;
+    setMapReady(true);
+
+    // Ensure tiles render correctly even if the container size is computed by flex layout.
+    setTimeout(() => {
+      map.invalidateSize();
+    }, 0);
 
     return () => {
       map.remove();
@@ -118,7 +129,7 @@ const MapComponent: React.FC = () => {
 
   // Keep map centered + user marker updated
   useEffect(() => {
-    if (!position || !mapRef.current) return;
+    if (!mapReady || !position || !mapRef.current) return;
 
     mapRef.current.setView([position.lat, position.lng], 14);
 
@@ -131,7 +142,7 @@ const MapComponent: React.FC = () => {
     } else {
       userMarkerRef.current.setLatLng([position.lat, position.lng]);
     }
-  }, [position]);
+  }, [position, mapReady]);
 
   // Render station markers
   useEffect(() => {
