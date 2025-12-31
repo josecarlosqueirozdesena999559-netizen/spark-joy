@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Lock, Eye, EyeOff, Shield, KeyRound } from 'lucide-react';
+import { Lock, Eye, EyeOff, Shield, KeyRound, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useNavigate } from 'react-router-dom';
 import {
   Dialog,
   DialogContent,
@@ -17,12 +18,17 @@ interface VaultAuthProps {
 }
 
 export const VaultAuth = ({ onAuthenticated }: VaultAuthProps) => {
+  const navigate = useNavigate();
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isNewUser, setIsNewUser] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  const handleClose = () => {
+    navigate('/');
+  };
 
   useEffect(() => {
     // Check if user has a vault password set
@@ -65,19 +71,26 @@ export const VaultAuth = ({ onAuthenticated }: VaultAuthProps) => {
   }
 
   return (
-    <Dialog open={true} onOpenChange={() => {}}>
+    <Dialog open={true} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md" onPointerDownOutside={(e) => e.preventDefault()}>
+        <button
+          onClick={handleClose}
+          className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+        >
+          <X className="h-4 w-4" />
+          <span className="sr-only">Fechar</span>
+        </button>
         <DialogHeader className="text-center">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
             <Lock className="h-8 w-8 text-primary" />
           </div>
           <DialogTitle className="text-xl">
-            {isNewUser ? 'Configure seu Cofre' : 'Acesse seu Cofre'}
+            {isNewUser ? 'Configure seu Cofre Seguro' : 'Acesse seu Cofre'}
           </DialogTitle>
           <DialogDescription className="text-base">
             {isNewUser 
-              ? 'Crie uma senha exclusiva para proteger suas evidências. Esta senha criptografa seus dados.'
-              : 'Digite sua senha do cofre para acessar suas evidências.'
+              ? 'Crie uma senha exclusiva para proteger suas evidências. Seus dados serão criptografados com segurança.'
+              : 'Insira sua senha para acessar suas evidências protegidas.'
             }
           </DialogDescription>
         </DialogHeader>
@@ -135,8 +148,8 @@ export const VaultAuth = ({ onAuthenticated }: VaultAuthProps) => {
 
           <p className="text-center text-xs text-muted-foreground">
             {isNewUser 
-              ? 'Guarde bem esta senha. Sem ela, não será possível recuperar seus dados.'
-              : 'Seus dados estão criptografados e seguros.'
+              ? 'Importante: guarde esta senha em local seguro. Sem ela, não será possível recuperar seus dados.'
+              : 'Suas informações estão protegidas com criptografia de ponta a ponta.'
             }
           </p>
         </form>
