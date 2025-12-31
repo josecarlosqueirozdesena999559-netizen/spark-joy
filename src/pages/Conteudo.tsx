@@ -5,7 +5,6 @@ import BottomNav from '@/components/layout/BottomNav';
 import { MotivationalBanner } from '@/components/shared/MotivationalBanner';
 import { GlobalCourageThermometer } from '@/components/content/GlobalCourageThermometer';
 import { DenunciaQuestionnaire } from '@/components/content/DenunciaQuestionnaire';
-import { CourageContent } from '@/components/content/CourageContent';
 import { VaultAccessCard } from '@/components/content/VaultAccessCard';
 import { useQuestionnaireStatus } from '@/hooks/useDenunciaStats';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -36,33 +35,32 @@ const Conteudo: React.FC = () => {
         </div>
       </header>
 
-      {/* Motivational Banner - Always visible at top */}
+      {/* Balão Motivacional - Sempre visível no topo */}
       <div className="sticky top-14 z-20 bg-background/95 backdrop-blur-sm pt-2">
         <MotivationalBanner />
       </div>
 
-      {/* Scrollable Content Area */}
+      {/* Área de Conteúdo Rolável */}
       <ScrollArea className="h-[calc(100vh-8rem)]">
         <main className="max-w-lg mx-auto px-4 py-4 space-y-4">
           {isLoading ? (
-            // Loading state
+            // Estado de carregamento
             <>
-              <Skeleton className="h-48 w-full rounded-xl" />
-              <Skeleton className="h-64 w-full rounded-xl" />
+              <Skeleton className="h-32 w-full rounded-xl" />
+              <Skeleton className="h-24 w-full rounded-xl" />
             </>
           ) : showContent ? (
-            // Após responder: Termômetro + Conteúdos + Cofre
+            // Após responder: Termômetro Global + Cofre Criptografado
             <>
               <GlobalCourageThermometer />
-              <CourageContent />
               <VaultAccessCard />
             </>
           ) : (
-            // Antes de responder: Apenas questionário
+            // Antes de responder: Questionário de Coragem
             <DenunciaQuestionnaire onComplete={handleQuestionnaireComplete} />
           )}
 
-          {/* Bottom spacing for scroll */}
+          {/* Espaçamento inferior */}
           <div className="h-4" />
         </main>
       </ScrollArea>
