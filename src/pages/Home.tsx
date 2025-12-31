@@ -1,67 +1,69 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Heart, Loader2 } from 'lucide-react';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFeed } from '@/hooks/useFeed';
 import { useOnboarding } from '@/hooks/useOnboarding';
 import { useUserProfile } from '@/hooks/useUserProfile';
+import { useToast } from '@/hooks/use-toast';
+import FeedHeader from '@/components/feed/FeedHeader';
 import FeedOnboarding from '@/components/feed/FeedOnboarding';
 import CreatePostForm from '@/components/feed/CreatePostForm';
 import PostCard from '@/components/feed/PostCard';
 import EditPostDialog from '@/components/feed/EditPostDialog';
+import ReportDialog from '@/components/feed/ReportDialog';
 import BottomNav from '@/components/layout/BottomNav';
 
-const avatarIcons: Record<string, string> = {
-  heart: '❤️',
-  star: '⭐',
-  flower: '🌸',
-  butterfly: '🦋',
-  rainbow: '🌈',
-  moon: '🌙',
-  sun: '☀️',
-  leaf: '🍃',
-};
-
 const Home: React.FC = () => {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const userId = user?.id || '';
   
   const { profile } = useUserProfile(userId);
   const { showOnboarding, dismissOnboarding } = useOnboarding(userId);
-  const { posts, loading, fetchPosts, toggleSupport, deletePost, reportPost } = useFeed(userId);
+  const { posts, loading, fetchPosts, toggleSupport, deletePost, hidePost } = useFeed(userId);
   
   const [editingPost, setEditingPost] = useState<{ id: string; content: string } | null>(null);
+  const [reportData, setReportData] = useState<{ postId: string; userId: string } | null>(null);
 
   const handleEdit = (post: { id: string; content: string }) => {
     setEditingPost(post);
   };
 
+  const handleReport = (postId: string, reportedUserId: string) => {
+    setReportData({ postId, userId: reportedUserId });
+  };
+
+  const handleReportSuccess = () => {
+    if (reportData) {
+      hidePost(reportData.postId);
+    }
+    setReportData(null);
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
+    toast({
+      title: 'Até logo!',
+      description: 'Você saiu da sua conta.',
+    });
+    navigate('/auth');
+  };
+
   return (
-    <div className="min-h-screen bg-background safe-area-inset pb-20">
+    <div className="min-h-screen bg-background" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
       {/* Onboarding Modal */}
       {showOnboarding && <FeedOnboarding onClose={dismissOnboarding} />}
 
       {/* Header */}
-      <header className="sticky top-0 z-30 bg-card/80 backdrop-blur-lg border-b border-border">
-        <div className="flex items-center justify-between px-4 h-16 max-w-lg mx-auto">
-          <div className="flex items-center gap-2">
-            <Heart className="w-6 h-6 text-primary" fill="currentColor" />
-            <h1 className="text-xl font-bold text-foreground">PorElas</h1>
-          </div>
-          
-          <button 
-            onClick={() => navigate('/perfil')}
-            className="w-10 h-10 bg-secondary rounded-full flex items-center justify-center text-lg hover:ring-2 ring-primary transition-all"
-          >
-            {avatarIcons[profile?.avatar_icon || 'heart']}
-          </button>
-        </div>
-      </header>
+      <FeedHeader 
+        avatarIcon={profile?.avatar_icon || 'heart'}
+        onSignOut={handleSignOut}
+      />
 
       {/* Main Content */}
-      <main className="max-w-lg mx-auto px-4 py-4">
+      <main className="w-full max-w-md mx-auto px-4 py-4 pb-24">
         {/* Create Post */}
         <CreatePostForm
           userId={userId}
@@ -94,7 +96,7 @@ const Home: React.FC = () => {
                 onSupport={toggleSupport}
                 onEdit={handleEdit}
                 onDelete={deletePost}
-                onReport={reportPost}
+                onReport={handleReport}
               />
             ))}
           </div>
@@ -111,6 +113,16 @@ const Home: React.FC = () => {
           onPostUpdated={fetchPosts}
         />
       )}
+
+      {/* Report Dialog */}
+      <ReportDialog
+        open={!!reportData}
+        onOpenChange={(open) => !open && setReportData(null)}
+        postId={reportData?.postId}
+        reportedUserId={reportData?.userId}
+        reporterId={userId}
+        onReportSuccess={handleReportSuccess}
+      />
 
       {/* Bottom Navigation */}
       <BottomNav />
