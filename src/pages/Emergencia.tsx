@@ -3,6 +3,7 @@ import { Phone, AlertTriangle, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import BottomNav from '@/components/layout/BottomNav';
+import { MotivationalBanner } from '@/components/shared/MotivationalBanner';
 
 const emergencyContacts = [
   {
@@ -51,6 +52,8 @@ const Emergencia: React.FC = () => {
       </header>
 
       <main className="max-w-lg mx-auto px-4 py-6 -mt-4">
+        <MotivationalBanner />
+        
         <div className="space-y-3">
           {emergencyContacts.map((contact) => (
             <Card 

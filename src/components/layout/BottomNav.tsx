@@ -1,13 +1,14 @@
 import React from 'react';
-import { Home, MapPin, BookOpen, Phone } from 'lucide-react';
+import { Home, MapPin, BookOpen, Phone, Lock } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 
 const navItems = [
   { icon: Home, label: 'Feed', path: '/' },
-  { icon: MapPin, label: 'Mapa', path: '/mapa' },
+  { icon: MapPin, label: 'Radar', path: '/mapa' },
+  { icon: Lock, label: 'Cofre', path: '/cofre' },
   { icon: BookOpen, label: 'Conteúdo', path: '/conteudo' },
-  { icon: Phone, label: 'Emergência', path: '/emergencia', isEmergency: true },
+  { icon: Phone, label: 'S.O.S', path: '/emergencia', isEmergency: true },
 ];
 
 const BottomNav: React.FC = () => {

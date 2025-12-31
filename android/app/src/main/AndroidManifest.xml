@@ -4,17 +4,25 @@
     <!-- Localização Precisa: GPS de alta precisão -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     
-    <!-- Localização por Rede: quando GPS não está disponível -->
+    <!-- Localização por Rede -->
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     
-    <!-- Localização em Segundo Plano: para S.O.S funcionar com app fechado -->
+    <!-- Localização em Segundo Plano: para S.O.S com app fechado -->
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
     
-    <!-- Chamada de Emergência: ligar para delegacia com um clique -->
+    <!-- Chamada de Emergência -->
     <uses-permission android:name="android.permission.CALL_PHONE" />
     
-    <!-- Internet para buscar delegacias -->
+    <!-- Internet -->
     <uses-permission android:name="android.permission.INTERNET" />
+    
+    <!-- Permissões de Arquivo para PDF -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    
+    <!-- Câmera para captura direta no Cofre -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
 
     <application
         android:allowBackup="true"

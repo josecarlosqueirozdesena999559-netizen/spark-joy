@@ -2,6 +2,7 @@ import React from 'react';
 import { Radar } from 'lucide-react';
 import BottomNav from '@/components/layout/BottomNav';
 import SecurityRadar from '@/components/map/SecurityRadar';
+import { MotivationalBanner } from '@/components/shared/MotivationalBanner';
 
 const Mapa: React.FC = () => {
   return (
@@ -12,6 +13,10 @@ const Mapa: React.FC = () => {
           <h1 className="text-lg font-bold text-foreground">Radar de Segurança</h1>
         </div>
       </header>
+
+      <div className="pt-4">
+        <MotivationalBanner />
+      </div>
 
       <SecurityRadar />
 
