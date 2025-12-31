@@ -28,7 +28,7 @@ export const useFeed = (currentUserId: string) => {
     
     setLoading(true);
     
-    // Fetch posts with profiles
+    // Fetch posts with profiles (profiles RLS already filters deleted_at IS NULL)
     const { data: postsData, error: postsError } = await supabase
       .from('posts')
       .select(`
@@ -39,7 +39,8 @@ export const useFeed = (currentUserId: string) => {
         created_at,
         profiles!posts_user_id_fkey (
           username,
-          avatar_icon
+          avatar_icon,
+          deleted_at
         )
       `)
       .order('created_at', { ascending: false });
@@ -50,8 +51,14 @@ export const useFeed = (currentUserId: string) => {
       return;
     }
 
+    // Filter out posts from deleted users (deleted_at is not null)
+    const activePostsData = postsData?.filter(post => {
+      const profile = post.profiles as { username: string; avatar_icon: string; deleted_at: string | null } | null;
+      return profile && profile.deleted_at === null;
+    }) || [];
+
     // Fetch supports count for each post
-    const postIds = postsData?.map(p => p.id) || [];
+    const postIds = activePostsData.map(p => p.id);
     
     if (postIds.length === 0) {
       setPosts([]);
@@ -79,7 +86,7 @@ export const useFeed = (currentUserId: string) => {
     const reportedPostIds = new Set(reportedData?.map(r => r.post_id) || []);
 
     // Transform data
-    const transformedPosts: Post[] = (postsData || [])
+    const transformedPosts: Post[] = activePostsData
       .filter(post => !reportedPostIds.has(post.id))
       .map(post => {
         const supports = supportsData?.filter(s => s.post_id === post.id) || [];
