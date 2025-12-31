@@ -45,12 +45,12 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onBack }
   if (emailSent) {
     return (
       <div className="text-center space-y-6">
-        <div className="mx-auto w-16 h-16 bg-success/10 rounded-full flex items-center justify-center">
-          <Check className="w-8 h-8 text-success" />
+        <div className="mx-auto w-16 h-16 bg-primary/20 rounded-full flex items-center justify-center">
+          <Check className="w-8 h-8 text-primary" />
         </div>
-        <div className="space-y-2">
-          <h3 className="text-lg font-semibold text-foreground">E-mail enviado!</h3>
-          <p className="text-sm text-muted-foreground">
+        <div className="space-y-2 bg-primary/10 p-4 rounded-xl border border-primary/20">
+          <h3 className="text-lg font-semibold text-primary">E-mail enviado!</h3>
+          <p className="text-sm text-foreground/80">
             Verifique sua caixa de entrada e siga as instruções para redefinir sua senha.
           </p>
         </div>
