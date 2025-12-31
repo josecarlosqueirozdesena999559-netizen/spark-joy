@@ -20,9 +20,12 @@ interface Post {
 export const useFeed = (currentUserId: string) => {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
+  const [hiddenPosts, setHiddenPosts] = useState<Set<string>>(new Set());
   const { toast } = useToast();
 
   const fetchPosts = useCallback(async () => {
+    if (!currentUserId) return;
+    
     setLoading(true);
     
     // Fetch posts with profiles
@@ -50,6 +53,12 @@ export const useFeed = (currentUserId: string) => {
     // Fetch supports count for each post
     const postIds = postsData?.map(p => p.id) || [];
     
+    if (postIds.length === 0) {
+      setPosts([]);
+      setLoading(false);
+      return;
+    }
+
     const { data: supportsData } = await supabase
       .from('post_supports')
       .select('post_id, user_id')
@@ -60,19 +69,30 @@ export const useFeed = (currentUserId: string) => {
       .select('post_id')
       .in('post_id', postIds);
 
+    // Fetch user's reported posts to hide them
+    const { data: reportedData } = await supabase
+      .from('reports')
+      .select('post_id')
+      .eq('reporter_id', currentUserId)
+      .not('post_id', 'is', null);
+
+    const reportedPostIds = new Set(reportedData?.map(r => r.post_id) || []);
+
     // Transform data
-    const transformedPosts: Post[] = (postsData || []).map(post => {
-      const supports = supportsData?.filter(s => s.post_id === post.id) || [];
-      const comments = commentsData?.filter(c => c.post_id === post.id) || [];
-      
-      return {
-        ...post,
-        profiles: post.profiles as { username: string; avatar_icon: string },
-        supports_count: supports.length,
-        comments_count: comments.length,
-        user_has_supported: supports.some(s => s.user_id === currentUserId),
-      };
-    });
+    const transformedPosts: Post[] = (postsData || [])
+      .filter(post => !reportedPostIds.has(post.id))
+      .map(post => {
+        const supports = supportsData?.filter(s => s.post_id === post.id) || [];
+        const comments = commentsData?.filter(c => c.post_id === post.id) || [];
+        
+        return {
+          ...post,
+          profiles: post.profiles as { username: string; avatar_icon: string },
+          supports_count: supports.length,
+          comments_count: comments.length,
+          user_has_supported: supports.some(s => s.user_id === currentUserId),
+        };
+      });
 
     setPosts(transformedPosts);
     setLoading(false);
@@ -89,7 +109,6 @@ export const useFeed = (currentUserId: string) => {
     if (!post) return;
 
     if (post.user_has_supported) {
-      // Remove support
       const { error } = await supabase
         .from('post_supports')
         .delete()
@@ -104,7 +123,6 @@ export const useFeed = (currentUserId: string) => {
         ));
       }
     } else {
-      // Add support
       const { error } = await supabase
         .from('post_supports')
         .insert({ post_id: postId, user_id: currentUserId });
@@ -140,27 +158,10 @@ export const useFeed = (currentUserId: string) => {
     }
   };
 
-  const reportPost = async (postId: string) => {
-    const { error } = await supabase
-      .from('reports')
-      .insert({
-        reporter_id: currentUserId,
-        post_id: postId,
-        reason: 'Conteúdo inapropriado',
-      });
-
-    if (error) {
-      toast({
-        title: 'Erro',
-        description: 'Não foi possível enviar a denúncia.',
-        variant: 'destructive',
-      });
-    } else {
-      toast({
-        title: 'Denúncia enviada',
-        description: 'Obrigada por ajudar a manter nossa comunidade segura.',
-      });
-    }
+  const hidePost = (postId: string) => {
+    // Immediately hide the post from the feed (Level 1 - Suspension simulation)
+    setPosts(prev => prev.filter(p => p.id !== postId));
+    setHiddenPosts(prev => new Set([...prev, postId]));
   };
 
   return {
@@ -169,6 +170,6 @@ export const useFeed = (currentUserId: string) => {
     fetchPosts,
     toggleSupport,
     deletePost,
-    reportPost,
+    hidePost,
   };
 };
