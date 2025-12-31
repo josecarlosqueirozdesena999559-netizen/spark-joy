@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface UserProfile {
@@ -11,26 +11,29 @@ export const useUserProfile = (userId: string) => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const fetchProfile = useCallback(async () => {
     if (!userId) return;
+    
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, username, avatar_icon')
+      .eq('id', userId)
+      .maybeSingle();
 
-    const fetchProfile = async () => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, username, avatar_icon')
-        .eq('id', userId)
-        .maybeSingle();
-
-      if (error) {
-        console.error('Error fetching profile:', error);
-      } else {
-        setProfile(data);
-      }
-      setLoading(false);
-    };
-
-    fetchProfile();
+    if (error) {
+      console.error('Error fetching profile:', error);
+    } else {
+      setProfile(data);
+    }
+    setLoading(false);
   }, [userId]);
 
-  return { profile, loading };
+  useEffect(() => {
+    if (userId) {
+      fetchProfile();
+    }
+  }, [userId, fetchProfile]);
+
+  return { profile, loading, refetch: fetchProfile };
 };
