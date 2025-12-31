@@ -14,6 +14,7 @@ const tiposAgressao = [
   { value: 'patrimonial', label: 'Violência Patrimonial', description: 'Controle financeiro, destruição de bens' },
   { value: 'moral', label: 'Violência Moral', description: 'Calúnia, difamação, injúria' },
   { value: 'outra', label: 'Outro tipo', description: 'Outra forma de violência' },
+  { value: 'apoio', label: 'Estou aqui para apoiar', description: 'Quero conhecer e encorajar outras mulheres', isSupport: true },
 ];
 
 interface DenunciaQuestionnaireProps {
@@ -30,7 +31,26 @@ export const DenunciaQuestionnaire: React.FC<DenunciaQuestionnaireProps> = ({ on
 
   const handleNext = () => {
     if (step === 1 && tipoAgressao) {
-      setStep(2);
+      // Se for apoio, pular direto para submissão
+      if (tipoAgressao === 'apoio') {
+        handleSubmitAsSupporter();
+      } else {
+        setStep(2);
+      }
+    }
+  };
+
+  const handleSubmitAsSupporter = async () => {
+    setIsSubmitting(true);
+    try {
+      await submitMutation.mutateAsync({ tipoAgressao: 'apoio', denunciou: false, isSupporter: true });
+      toast.success('Obrigada por fazer parte desta rede de apoio!');
+      onComplete();
+    } catch (error) {
+      console.error('Error submitting:', error);
+      toast.error('Erro ao enviar. Tente novamente.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -101,9 +121,9 @@ export const DenunciaQuestionnaire: React.FC<DenunciaQuestionnaireProps> = ({ on
               ))}
             </RadioGroup>
 
-            <Button onClick={handleNext} disabled={!tipoAgressao} className="w-full gap-2">
-              Próximo
-              <ChevronRight className="w-4 h-4" />
+            <Button onClick={handleNext} disabled={!tipoAgressao || isSubmitting} className="w-full gap-2">
+              {isSubmitting ? 'Enviando...' : tipoAgressao === 'apoio' ? 'Entrar na Comunidade' : 'Próximo'}
+              {!isSubmitting && tipoAgressao !== 'apoio' && <ChevronRight className="w-4 h-4" />}
             </Button>
           </>
         )}

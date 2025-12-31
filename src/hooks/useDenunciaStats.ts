@@ -39,6 +39,8 @@ export const useDenunciaStats = () => {
         percentual,
       };
     },
+    staleTime: 0, // Sempre buscar dados frescos
+    refetchOnMount: true,
   });
 
   // Configurar Realtime para atualizar automaticamente
@@ -99,14 +101,17 @@ export const useSubmitQuestionnaire = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: { tipoAgressao: string; denunciou: boolean }) => {
-      // 1. Inserir estatística anônima
-      const { error: statsError } = await supabase.from('denuncia_stats').insert({
-        tipo_agressao: data.tipoAgressao,
-        denunciou: data.denunciou,
-      });
+    mutationFn: async (data: { tipoAgressao: string; denunciou: boolean; isSupporter?: boolean }) => {
+      // Se for apoiadora, não inserir nas estatísticas de denúncia
+      if (!data.isSupporter) {
+        // 1. Inserir estatística anônima
+        const { error: statsError } = await supabase.from('denuncia_stats').insert({
+          tipo_agressao: data.tipoAgressao,
+          denunciou: data.denunciou,
+        });
 
-      if (statsError) throw statsError;
+        if (statsError) throw statsError;
+      }
 
       // 2. Marcar que a usuária respondeu (se logada)
       if (user) {

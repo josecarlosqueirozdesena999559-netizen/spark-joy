@@ -79,6 +79,14 @@ export const AddVaultItemDialog = ({
     setNotes('');
     setSelectedFile(null);
     setFilePreview(null);
+    setActiveTab('text');
+  };
+
+  const handleOpenChange = (newOpen: boolean) => {
+    if (!newOpen) {
+      resetForm();
+    }
+    onOpenChange(newOpen);
   };
 
   const clearFile = () => {
@@ -89,7 +97,7 @@ export const AddVaultItemDialog = ({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Adicionar Evidência</DialogTitle>
