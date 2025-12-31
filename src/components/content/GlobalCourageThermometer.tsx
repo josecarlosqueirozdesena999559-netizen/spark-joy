@@ -42,7 +42,7 @@ export const GlobalCourageThermometer: React.FC = () => {
           </div>
           <Progress 
             value={percentual} 
-            className="h-5 bg-secondary/50 transition-all duration-1000 ease-out"
+            className="h-5 bg-secondary/50"
           />
         </div>
 
