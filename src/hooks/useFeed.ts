@@ -1,0 +1,174 @@
+import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+
+interface Post {
+  id: string;
+  user_id: string;
+  content: string;
+  image_url: string | null;
+  created_at: string;
+  profiles: {
+    username: string;
+    avatar_icon: string;
+  };
+  supports_count: number;
+  comments_count: number;
+  user_has_supported: boolean;
+}
+
+export const useFeed = (currentUserId: string) => {
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
+
+  const fetchPosts = useCallback(async () => {
+    setLoading(true);
+    
+    // Fetch posts with profiles
+    const { data: postsData, error: postsError } = await supabase
+      .from('posts')
+      .select(`
+        id,
+        user_id,
+        content,
+        image_url,
+        created_at,
+        profiles!posts_user_id_fkey (
+          username,
+          avatar_icon
+        )
+      `)
+      .order('created_at', { ascending: false });
+
+    if (postsError) {
+      console.error('Error fetching posts:', postsError);
+      setLoading(false);
+      return;
+    }
+
+    // Fetch supports count for each post
+    const postIds = postsData?.map(p => p.id) || [];
+    
+    const { data: supportsData } = await supabase
+      .from('post_supports')
+      .select('post_id, user_id')
+      .in('post_id', postIds);
+
+    const { data: commentsData } = await supabase
+      .from('comments')
+      .select('post_id')
+      .in('post_id', postIds);
+
+    // Transform data
+    const transformedPosts: Post[] = (postsData || []).map(post => {
+      const supports = supportsData?.filter(s => s.post_id === post.id) || [];
+      const comments = commentsData?.filter(c => c.post_id === post.id) || [];
+      
+      return {
+        ...post,
+        profiles: post.profiles as { username: string; avatar_icon: string },
+        supports_count: supports.length,
+        comments_count: comments.length,
+        user_has_supported: supports.some(s => s.user_id === currentUserId),
+      };
+    });
+
+    setPosts(transformedPosts);
+    setLoading(false);
+  }, [currentUserId]);
+
+  useEffect(() => {
+    if (currentUserId) {
+      fetchPosts();
+    }
+  }, [currentUserId, fetchPosts]);
+
+  const toggleSupport = async (postId: string) => {
+    const post = posts.find(p => p.id === postId);
+    if (!post) return;
+
+    if (post.user_has_supported) {
+      // Remove support
+      const { error } = await supabase
+        .from('post_supports')
+        .delete()
+        .eq('post_id', postId)
+        .eq('user_id', currentUserId);
+
+      if (!error) {
+        setPosts(prev => prev.map(p => 
+          p.id === postId 
+            ? { ...p, supports_count: p.supports_count - 1, user_has_supported: false }
+            : p
+        ));
+      }
+    } else {
+      // Add support
+      const { error } = await supabase
+        .from('post_supports')
+        .insert({ post_id: postId, user_id: currentUserId });
+
+      if (!error) {
+        setPosts(prev => prev.map(p => 
+          p.id === postId 
+            ? { ...p, supports_count: p.supports_count + 1, user_has_supported: true }
+            : p
+        ));
+      }
+    }
+  };
+
+  const deletePost = async (postId: string) => {
+    const { error } = await supabase
+      .from('posts')
+      .delete()
+      .eq('id', postId);
+
+    if (error) {
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível excluir a publicação.',
+        variant: 'destructive',
+      });
+    } else {
+      setPosts(prev => prev.filter(p => p.id !== postId));
+      toast({
+        title: 'Excluído',
+        description: 'Publicação removida com sucesso.',
+      });
+    }
+  };
+
+  const reportPost = async (postId: string) => {
+    const { error } = await supabase
+      .from('reports')
+      .insert({
+        reporter_id: currentUserId,
+        post_id: postId,
+        reason: 'Conteúdo inapropriado',
+      });
+
+    if (error) {
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível enviar a denúncia.',
+        variant: 'destructive',
+      });
+    } else {
+      toast({
+        title: 'Denúncia enviada',
+        description: 'Obrigada por ajudar a manter nossa comunidade segura.',
+      });
+    }
+  };
+
+  return {
+    posts,
+    loading,
+    fetchPosts,
+    toggleSupport,
+    deletePost,
+    reportPost,
+  };
+};
