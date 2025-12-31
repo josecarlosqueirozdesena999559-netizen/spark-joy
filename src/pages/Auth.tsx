@@ -46,44 +46,43 @@ const Auth: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4 gradient-soft safe-area-inset">
-      <div className="w-full max-w-md">
-        <Card className="border-0 shadow-lg">
-          <CardHeader className="text-center pb-2">
-            <div className="flex items-center justify-center gap-2 mb-2">
-              <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
-                <Heart className="w-5 h-5 text-primary-foreground" fill="currentColor" />
-              </div>
+    <div className="min-h-screen flex flex-col items-center justify-center px-4 py-6 gradient-soft safe-area-inset">
+      <div className="w-full max-w-sm">
+        <div className="text-center mb-6">
+          <div className="flex items-center justify-center gap-2 mb-3">
+            <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center">
+              <Heart className="w-6 h-6 text-primary-foreground" fill="currentColor" />
             </div>
-            <h1 className="text-2xl font-bold text-foreground">PorElas</h1>
-            <p className="text-sm text-muted-foreground">
-              {view === 'login' && 'Bem-vinda de volta'}
-              {view === 'signup' && 'Crie sua conta'}
-              {view === 'forgot-password' && 'Recuperar senha'}
-            </p>
-          </CardHeader>
-          <CardContent className="pt-4">
-            {view === 'login' && (
-              <SignInForm
-                onSuccess={handleAuthSuccess}
-                onSwitchToSignUp={() => setView('signup')}
-                onForgotPassword={() => setView('forgot-password')}
-              />
-            )}
-            {view === 'signup' && (
-              <SignUpForm
-                onSuccess={handleAuthSuccess}
-                onSwitchToLogin={() => setView('login')}
-              />
-            )}
-            {view === 'forgot-password' && (
-              <ForgotPasswordForm onBack={() => setView('login')} />
-            )}
-          </CardContent>
-        </Card>
+          </div>
+          <h1 className="text-2xl font-bold text-foreground">PorElas</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            {view === 'login' && 'Bem-vinda de volta'}
+            {view === 'signup' && 'Crie sua conta'}
+            {view === 'forgot-password' && 'Recuperar senha'}
+          </p>
+        </div>
 
-        <p className="text-center text-xs text-muted-foreground mt-6">
-          © 2024 PorElas. Todos os direitos reservados.
+        <div className="space-y-4">
+          {view === 'login' && (
+            <SignInForm
+              onSuccess={handleAuthSuccess}
+              onSwitchToSignUp={() => setView('signup')}
+              onForgotPassword={() => setView('forgot-password')}
+            />
+          )}
+          {view === 'signup' && (
+            <SignUpForm
+              onSuccess={handleAuthSuccess}
+              onSwitchToLogin={() => setView('login')}
+            />
+          )}
+          {view === 'forgot-password' && (
+            <ForgotPasswordForm onBack={() => setView('login')} />
+          )}
+        </div>
+
+        <p className="text-center text-xs text-muted-foreground mt-8">
+          © 2025 PorElas. Todos os direitos reservados.
         </p>
       </div>
     </div>
