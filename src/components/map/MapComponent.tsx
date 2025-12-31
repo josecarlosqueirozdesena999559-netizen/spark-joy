@@ -72,7 +72,6 @@ const MapComponent: React.FC = () => {
     useState<PoliceStation | null>(null);
   const [mapReady, setMapReady] = useState(false);
 
-  const mapElRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
   const userMarkerRef = useRef<L.Marker | null>(null);
   const stationsLayerRef = useRef<L.LayerGroup | null>(null);
@@ -91,11 +90,15 @@ const MapComponent: React.FC = () => {
     }
   };
 
-  // Initialize Leaflet map once
+  // Initialize Leaflet map once using the container id
   useEffect(() => {
-    if (!mapElRef.current || mapRef.current) return;
+    // Prevent double initialization
+    if (mapRef.current) return;
 
-    const map = L.map(mapElRef.current, {
+    const container = document.getElementById("map-container");
+    if (!container) return;
+
+    const map = L.map("map-container", {
       zoomControl: false,
     });
 
@@ -104,9 +107,10 @@ const MapComponent: React.FC = () => {
         '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
     }).addTo(map);
 
-    // IMPORTANT: Leaflet only starts loading tiles after it has a view.
-    // Set an initial view immediately to avoid a blank map.
-    map.setView([0, 0], 2);
+    // Set initial view - will be updated when position is available
+    const initialLat = position?.lat ?? -23.5505;
+    const initialLng = position?.lng ?? -46.6333;
+    map.setView([initialLat, initialLng], 13);
 
     const stationsLayer = L.layerGroup().addTo(map);
 
@@ -114,10 +118,10 @@ const MapComponent: React.FC = () => {
     stationsLayerRef.current = stationsLayer;
     setMapReady(true);
 
-    // Ensure tiles render correctly even if the container size is computed by flex layout.
+    // Ensure tiles render correctly
     setTimeout(() => {
       map.invalidateSize();
-    }, 0);
+    }, 100);
 
     return () => {
       map.remove();
@@ -191,7 +195,7 @@ const MapComponent: React.FC = () => {
 
   return (
     <div className="flex-1 relative">
-      <div ref={mapElRef} className="h-full w-full" />
+      <div id="map-container" className="h-full w-full" />
 
       {/* Refresh button */}
       <Button
