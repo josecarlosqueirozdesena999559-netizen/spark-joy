@@ -359,6 +359,45 @@ export type Database = {
         }
         Relationships: []
       }
+      vault_items: {
+        Row: {
+          created_at: string
+          encrypted_content: string | null
+          encrypted_file_path: string | null
+          file_name: string | null
+          file_size: number | null
+          id: string
+          item_type: string
+          notes: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          encrypted_content?: string | null
+          encrypted_file_path?: string | null
+          file_name?: string | null
+          file_size?: number | null
+          id?: string
+          item_type: string
+          notes?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          encrypted_content?: string | null
+          encrypted_file_path?: string | null
+          file_name?: string | null
+          file_size?: number | null
+          id?: string
+          item_type?: string
+          notes?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

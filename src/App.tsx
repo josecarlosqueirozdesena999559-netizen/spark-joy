@@ -9,6 +9,7 @@ import { PermissionModal } from "@/components/permissions/PermissionModal";
 import Auth from "./pages/Auth";
 import Home from "./pages/Home";
 import Mapa from "./pages/Mapa";
+import Cofre from "./pages/Cofre";
 import Conteudo from "./pages/Conteudo";
 import Emergencia from "./pages/Emergencia";
 import Perfil from "./pages/Perfil";
@@ -59,6 +60,14 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute>
             <Mapa />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/cofre"
+        element={
+          <ProtectedRoute>
+            <Cofre />
           </ProtectedRoute>
         }
       />
