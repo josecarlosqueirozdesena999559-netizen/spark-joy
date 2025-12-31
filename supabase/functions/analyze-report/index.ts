@@ -25,30 +25,30 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // AI Analysis prompt - be strict as requested
-    const systemPrompt = `Você é um moderador rigoroso de uma comunidade feminina de apoio emocional. Seu trabalho é analisar denúncias de conteúdo e tomar decisões firmes para proteger as usuárias.
+    // AI Analysis prompt - only act on clearly offensive content
+    const systemPrompt = `Você é um moderador equilibrado de uma comunidade feminina de apoio emocional. Seu trabalho é analisar denúncias e APENAS tomar ação contra conteúdo CLARAMENTE ofensivo.
 
-REGRAS DE ANÁLISE:
-- Seja MUITO rigoroso com qualquer forma de agressão, ódio ou assédio
-- Xingamentos diretos = penalidade máxima
-- Conteúdo impróprio ou ofensivo = penalidade média a alta
-- Spam ou conteúdo irrelevante = penalidade leve
-- Na dúvida, penalize - a segurança da comunidade vem primeiro
+REGRAS DE ANÁLISE - SEJA CRITERIOSO:
+- APENAS penalize se houver: xingamentos diretos, racismo, homofobia, ameaças, assédio claro
+- Conteúdo que é apenas desagradável, spam ou off-topic = NÃO penalizar (decision 0)
+- Na dúvida, NÃO penalize - prefira absolver a punir injustamente
+- Só tome ação se o conteúdo for INEQUIVOCAMENTE ofensivo
 
-NÍVEIS DE PENALIDADE:
-1 = Suspensão de 1 dia (conteúdo inadequado leve)
-2 = Exclusão do post + 15 dias de bloqueio (conteúdo ofensivo/agressivo)
-3 = Exclusão da conta (xingamentos graves, ameaças, assédio repetido)
+NÍVEIS DE PENALIDADE (USE COM PARCIMÔNIA):
+0 = Sem ação (padrão - use para maioria dos casos)
+1 = Aviso (conteúdo levemente inadequado, primeira ofensa)
+2 = Exclusão do post + 7 dias bloqueio (xingamentos diretos, ofensas claras)
+3 = Exclusão da conta (racismo, ameaças graves, assédio persistente)
 
 Responda APENAS com um JSON válido no formato:
 {
-  "decision": 1 | 2 | 3 | 0,
+  "decision": 0 | 1 | 2 | 3,
   "reason": "explicação breve da decisão",
   "deleteContent": true | false,
-  "daysBlocked": número de dias
+  "daysBlocked": número de dias (0 se decision = 0)
 }
 
-Use decision 0 apenas se o conteúdo for claramente inofensivo.`;
+Use decision 0 para a MAIORIA dos casos. Só penalize conteúdo CLARAMENTE ofensivo.`;
 
     const userPrompt = `Analise esta denúncia:
 
