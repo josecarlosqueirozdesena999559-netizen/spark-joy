@@ -30,7 +30,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete }) => {
           <img 
             src={porelasLogo} 
             alt="PorElas" 
-            className="relative w-40 h-40 object-contain drop-shadow-lg"
+            className="relative w-40 h-40 object-cover rounded-full drop-shadow-lg"
           />
         </div>
         

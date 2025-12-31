@@ -52,7 +52,7 @@ const Auth: React.FC = () => {
             <img 
               src={porelasLogo} 
               alt="PorElas" 
-              className="w-24 h-24 object-contain"
+              className="w-24 h-24 object-cover rounded-full"
             />
           </div>
           <p className="text-sm text-muted-foreground mt-1">
