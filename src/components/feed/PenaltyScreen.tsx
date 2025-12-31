@@ -25,7 +25,7 @@ const PenaltyScreen: React.FC<PenaltyScreenProps> = ({ level, daysRemaining = 15
             Conta Encerrada
           </h1>
           <p className="text-muted-foreground mb-6 leading-relaxed">
-            Sua conta foi permanentemente encerrada por violações repetidas das normas da comunidade.
+            Sua conta foi permanentemente encerrada por violações graves das normas da comunidade.
           </p>
           <p className="text-sm text-muted-foreground mb-8">
             Se você acredita que isso foi um erro, entre em contato com nosso suporte.
@@ -50,21 +50,17 @@ const PenaltyScreen: React.FC<PenaltyScreenProps> = ({ level, daysRemaining = 15
           <ShieldX className="w-10 h-10 text-warning" />
         </div>
         <h1 className="text-2xl font-bold text-foreground mb-3">
-          Acesso Suspenso
+          Acesso Bloqueado
         </h1>
         <p className="text-muted-foreground mb-4 leading-relaxed">
-          {level === 1
-            ? 'Sua conta está temporariamente suspensa por violação das normas da comunidade.'
-            : `Sua conta está bloqueada por ${daysRemaining} dias por violações das normas da comunidade.`}
+          Sua conta está bloqueada por {daysRemaining} dias devido a violações das normas da comunidade.
         </p>
         <div className="bg-secondary rounded-2xl p-4 mb-6">
           <p className="text-sm text-foreground font-medium">
-            {level === 1 ? 'Penalidade Nível 1' : 'Penalidade Nível 2'}
+            Penalidade Nível {level}
           </p>
           <p className="text-xs text-muted-foreground mt-1">
-            {level === 1
-              ? 'Suspensão temporária - algumas funcionalidades estão restritas.'
-              : `Bloqueio de ${daysRemaining} dias - aguarde para voltar a acessar.`}
+            Bloqueio de {daysRemaining} dias - aguarde para voltar a acessar.
           </p>
         </div>
         <Button 
