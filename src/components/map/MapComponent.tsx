@@ -98,6 +98,12 @@ const MapComponent: React.FC = () => {
     const container = document.getElementById("map-container");
     if (!container) return;
 
+    // Clean up any previous Leaflet instance on this container
+    // This prevents "Map container is already initialized" error
+    if ((container as any)._leaflet_id) {
+      (container as any)._leaflet_id = null;
+    }
+
     const map = L.map("map-container", {
       zoomControl: false,
     });
@@ -118,14 +124,17 @@ const MapComponent: React.FC = () => {
     stationsLayerRef.current = stationsLayer;
     setMapReady(true);
 
-    // Ensure tiles render correctly
+    // Ensure tiles render correctly after layout is computed
     setTimeout(() => {
       map.invalidateSize();
-    }, 100);
+    }, 150);
 
+    // Cleanup function to properly remove the map and free memory
     return () => {
-      map.remove();
-      mapRef.current = null;
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
       stationsLayerRef.current = null;
       userMarkerRef.current = null;
     };
