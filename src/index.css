@@ -209,3 +209,15 @@
     display: none;
   }
 }
+
+/* Leaflet map container - ensure proper sizing */
+#map-container {
+  height: 100% !important;
+  min-height: 500px;
+  width: 100%;
+}
+
+/* Fix for Leaflet tiles loading */
+.leaflet-container {
+  background: hsl(var(--muted));
+}
