@@ -4,7 +4,7 @@ import "leaflet/dist/leaflet.css";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { usePoliceStations, PoliceStation } from "@/hooks/usePoliceStations";
 import StationCard from "./StationCard";
-import { Loader2, MapPin, RefreshCw } from "lucide-react";
+import { Loader2, MapPin, RefreshCw, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 // Fix for default marker icons in webpack/vite
@@ -66,7 +66,7 @@ const MapComponent: React.FC = () => {
     error: geoError,
     refresh: refreshLocation,
   } = useGeolocation();
-  const { stations, loading: stationsLoading, fetchStations } =
+  const { stations, loading: stationsLoading, error: stationsError, fetchStations } =
     usePoliceStations();
   const [selectedStation, setSelectedStation] =
     useState<PoliceStation | null>(null);
@@ -220,15 +220,22 @@ const MapComponent: React.FC = () => {
         />
       </Button>
 
-      {/* Station count badge */}
-      {stations.length > 0 && (
+      {/* Station count badge or error */}
+      {stationsError ? (
+        <div className="absolute top-4 left-4 z-[1000] bg-destructive/90 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-lg flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4 text-destructive-foreground" />
+          <span className="text-sm font-medium text-destructive-foreground">
+            Erro ao carregar delegacias
+          </span>
+        </div>
+      ) : stations.length > 0 ? (
         <div className="absolute top-4 left-4 z-[1000] bg-card/95 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-lg border border-border">
           <span className="text-sm font-medium text-foreground">
             {stations.length} delegacia{stations.length !== 1 ? "s" : ""} encontrada
             {stations.length !== 1 ? "s" : ""}
           </span>
         </div>
-      )}
+      ) : null}
 
       {/* Selected station card */}
       {selectedStation && (
