@@ -159,30 +159,39 @@ export type Database = {
       }
       reports: {
         Row: {
+          ai_analysis: string | null
+          ai_decision: string | null
           comment_id: string | null
           created_at: string
           id: string
           post_id: string | null
+          processed_at: string | null
           reason: string
           reported_user_id: string | null
           reporter_id: string
           status: string
         }
         Insert: {
+          ai_analysis?: string | null
+          ai_decision?: string | null
           comment_id?: string | null
           created_at?: string
           id?: string
           post_id?: string | null
+          processed_at?: string | null
           reason: string
           reported_user_id?: string | null
           reporter_id: string
           status?: string
         }
         Update: {
+          ai_analysis?: string | null
+          ai_decision?: string | null
           comment_id?: string | null
           created_at?: string
           id?: string
           post_id?: string | null
+          processed_at?: string | null
           reason?: string
           reported_user_id?: string | null
           reporter_id?: string
@@ -279,6 +288,51 @@ export type Database = {
             foreignKeyName: "user_onboarding_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_penalties: {
+        Row: {
+          created_at: string
+          expires_at: string | null
+          id: string
+          penalty_level: number
+          reason: string
+          report_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          penalty_level: number
+          reason: string
+          report_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          penalty_level?: number
+          reason?: string
+          report_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_penalties_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "reports"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_penalties_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },

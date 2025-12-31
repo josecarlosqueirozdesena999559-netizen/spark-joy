@@ -1,1 +1,4 @@
 project_id = "mmgaqfddxoliltgjpfzk"
+
+[functions.analyze-report]
+verify_jwt = true
