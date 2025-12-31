@@ -20,9 +20,9 @@ export const usePoliceStations = () => {
 
     const radiusMeters = radiusKm * 1000;
     
-    // Overpass API query for police stations
+    // Overpass API query for police stations with increased timeout
     const query = `
-      [out:json][timeout:25];
+      [out:json][timeout:90];
       (
         node["amenity"="police"](around:${radiusMeters},${lat},${lng});
         way["amenity"="police"](around:${radiusMeters},${lat},${lng});
@@ -31,50 +31,78 @@ export const usePoliceStations = () => {
       out center;
     `;
 
-    try {
-      const response = await fetch('https://overpass-api.de/api/interpreter', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: `data=${encodeURIComponent(query)}`,
-      });
+    // List of Overpass API mirrors for fallback
+    const apiMirrors = [
+      'https://overpass.kumi.systems/api/interpreter',
+      'https://overpass-api.de/api/interpreter',
+      'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
+    ];
 
-      if (!response.ok) {
-        throw new Error('Erro ao buscar delegacias');
-      }
+    let lastError: Error | null = null;
 
-      const data = await response.json();
-      
-      const parsedStations: PoliceStation[] = data.elements
-        .filter((el: any) => {
-          // Get coordinates - for ways/relations, use center
-          const elLat = el.lat ?? el.center?.lat;
-          const elLng = el.lon ?? el.center?.lon;
-          return elLat && elLng;
-        })
-        .map((el: any) => {
-          const elLat = el.lat ?? el.center?.lat;
-          const elLng = el.lon ?? el.center?.lon;
-          const tags = el.tags || {};
-          
-          return {
-            id: el.id,
-            name: tags.name || tags['name:pt'] || getStationType(tags),
-            lat: elLat,
-            lng: elLng,
-            phone: tags.phone || tags['contact:phone'],
-            type: getStationType(tags),
-          };
+    for (const apiUrl of apiMirrors) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout
+
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: `data=${encodeURIComponent(query)}`,
+          signal: controller.signal,
         });
 
-      setStations(parsedStations);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro desconhecido');
-      setStations([]);
-    } finally {
-      setLoading(false);
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+          throw new Error(`Erro ${response.status}: ${response.statusText}`);
+        }
+
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          throw new Error('Servidor retornou resposta inválida');
+        }
+
+        const data = await response.json();
+        
+        const parsedStations: PoliceStation[] = data.elements
+          .filter((el: any) => {
+            // Get coordinates - for ways/relations, use center
+            const elLat = el.lat ?? el.center?.lat;
+            const elLng = el.lon ?? el.center?.lon;
+            return elLat && elLng;
+          })
+          .map((el: any) => {
+            const elLat = el.lat ?? el.center?.lat;
+            const elLng = el.lon ?? el.center?.lon;
+            const tags = el.tags || {};
+            
+            return {
+              id: el.id,
+              name: tags.name || tags['name:pt'] || getStationType(tags),
+              lat: elLat,
+              lng: elLng,
+              phone: tags.phone || tags['contact:phone'],
+              type: getStationType(tags),
+            };
+          });
+
+        setStations(parsedStations);
+        setLoading(false);
+        return; // Success - exit the loop
+      } catch (err) {
+        lastError = err instanceof Error ? err : new Error('Erro desconhecido');
+        console.warn(`Falha no servidor ${apiUrl}:`, lastError.message);
+        // Continue to next mirror
+      }
     }
+
+    // All mirrors failed
+    setError(lastError?.message || 'Não foi possível carregar as delegacias. Tente novamente.');
+    setStations([]);
+    setLoading(false);
   }, []);
 
   return { stations, loading, error, fetchStations };
