@@ -11,6 +11,17 @@ const config: CapacitorConfig = {
   plugins: {
     Geolocation: {
       // Enable high accuracy GPS
+    },
+    SplashScreen: {
+      launchShowDuration: 2500,
+      launchAutoHide: true,
+      launchFadeOutDuration: 500,
+      backgroundColor: '#E91E63',
+      androidSplashResourceName: 'splash',
+      androidScaleType: 'CENTER_CROP',
+      showSpinner: false,
+      splashFullScreen: true,
+      splashImmersive: true
     }
   },
   android: {

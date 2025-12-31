@@ -5,15 +5,26 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { SignUpForm } from '@/components/auth/SignUpForm';
 import { SignInForm } from '@/components/auth/SignInForm';
 import { ForgotPasswordForm } from '@/components/auth/ForgotPasswordForm';
-import { SplashScreen } from '@/components/auth/SplashScreen';
 import { useAuth } from '@/contexts/AuthContext';
+import { Capacitor } from '@capacitor/core';
+import { SplashScreen as CapacitorSplash } from '@capacitor/splash-screen';
+import { SplashScreen } from '@/components/auth/SplashScreen';
 
 type AuthView = 'splash' | 'login' | 'signup' | 'forgot-password';
 
 const Auth: React.FC = () => {
-  const [view, setView] = useState<AuthView>('splash');
+  // No nativo, splash é gerenciado pelo Capacitor; na web, usamos o componente React
+  const isNative = Capacitor.isNativePlatform();
+  const [view, setView] = useState<AuthView>(isNative ? 'login' : 'splash');
   const { user, loading } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    // Esconde o splash nativo quando o app estiver pronto
+    if (isNative) {
+      CapacitorSplash.hide({ fadeOutDuration: 500 });
+    }
+  }, [isNative]);
 
   useEffect(() => {
     if (!loading && user) {
@@ -29,7 +40,8 @@ const Auth: React.FC = () => {
     navigate('/');
   };
 
-  if (view === 'splash') {
+  // Na web, mostra o splash React; no nativo, pula direto para login
+  if (view === 'splash' && !isNative) {
     return <SplashScreen onComplete={handleSplashComplete} />;
   }
 
