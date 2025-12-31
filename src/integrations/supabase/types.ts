@@ -56,6 +56,27 @@ export type Database = {
           },
         ]
       }
+      denuncia_stats: {
+        Row: {
+          created_at: string
+          denunciou: boolean
+          id: string
+          tipo_agressao: string
+        }
+        Insert: {
+          created_at?: string
+          denunciou?: boolean
+          id?: string
+          tipo_agressao: string
+        }
+        Update: {
+          created_at?: string
+          denunciou?: boolean
+          id?: string
+          tipo_agressao?: string
+        }
+        Relationships: []
+      }
       post_supports: {
         Row: {
           created_at: string
@@ -269,18 +290,21 @@ export type Database = {
           created_at: string
           feed_onboarding_seen: boolean
           id: string
+          questionnaire_answered: boolean
           user_id: string
         }
         Insert: {
           created_at?: string
           feed_onboarding_seen?: boolean
           id?: string
+          questionnaire_answered?: boolean
           user_id: string
         }
         Update: {
           created_at?: string
           feed_onboarding_seen?: boolean
           id?: string
+          questionnaire_answered?: boolean
           user_id?: string
         }
         Relationships: [
