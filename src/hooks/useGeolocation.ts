@@ -36,7 +36,7 @@ export const useGeolocation = () => {
             error: error.message || 'Erro ao obter localização',
           });
         },
-        { enableHighAccuracy: true, timeout: 10000 }
+        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
       );
     } else {
       setState({

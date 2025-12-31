@@ -1,9 +1,11 @@
+import { useState } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { PermissionModal } from "@/components/permissions/PermissionModal";
 import Auth from "./pages/Auth";
 import Home from "./pages/Home";
 import Mapa from "./pages/Mapa";
@@ -17,6 +19,7 @@ const queryClient = new QueryClient();
 // Protected Route component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, loading } = useAuth();
+  const [permissionsReady, setPermissionsReady] = useState(false);
 
   if (loading) {
     return (
@@ -30,7 +33,12 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
     return <Navigate to="/auth" replace />;
   }
 
-  return <>{children}</>;
+  return (
+    <>
+      <PermissionModal onPermissionGranted={() => setPermissionsReady(true)} />
+      {permissionsReady && children}
+    </>
+  );
 };
 
 // App Routes component (inside AuthProvider)
