@@ -4,30 +4,31 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import BottomNav from '@/components/layout/BottomNav';
 import { MotivationalBanner } from '@/components/shared/MotivationalBanner';
+import porelasLogo from '@/assets/porelas-logo.png';
 
 const emergencyContacts = [
   {
     name: 'Central de Atendimento à Mulher',
     number: '180',
-    description: 'Funciona 24 horas, todos os dias',
+    description: 'Atendimento 24h, gratuito e confidencial',
     primary: true,
   },
   {
     name: 'Polícia Militar',
     number: '190',
-    description: 'Emergência policial',
+    description: 'Emergências policiais imediatas',
     primary: false,
   },
   {
     name: 'SAMU',
     number: '192',
-    description: 'Emergência médica',
+    description: 'Atendimento médico de urgência',
     primary: false,
   },
   {
-    name: 'Bombeiros',
+    name: 'Corpo de Bombeiros',
     number: '193',
-    description: 'Resgate e emergências',
+    description: 'Resgate e situações de emergência',
     primary: false,
   },
 ];
@@ -40,14 +41,26 @@ const Emergencia: React.FC = () => {
   return (
     <div className="min-h-screen bg-background safe-area-inset pb-20">
       <header className="gradient-primary">
-        <div className="px-4 py-8 max-w-lg mx-auto text-center">
-          <div className="w-16 h-16 bg-primary-foreground/20 rounded-full flex items-center justify-center mx-auto mb-4 backdrop-blur-sm">
-            <AlertTriangle className="w-8 h-8 text-primary-foreground" />
+        <div className="px-4 py-6 max-w-lg mx-auto">
+          <div className="flex items-center gap-3 mb-4">
+            <img 
+              src={porelasLogo} 
+              alt="PorElas" 
+              className="w-10 h-10 object-cover rounded-full"
+            />
+            <div>
+              <h1 className="text-lg font-bold text-primary-foreground">Emergência</h1>
+              <p className="text-primary-foreground/70 text-xs">Ajuda imediata quando você precisar</p>
+            </div>
           </div>
-          <h1 className="text-2xl font-bold text-primary-foreground mb-2">Emergência</h1>
-          <p className="text-primary-foreground/80 text-sm">
-            Se você está em perigo, ligue agora para um dos números abaixo
-          </p>
+          <div className="bg-primary-foreground/10 backdrop-blur-sm rounded-xl p-3 border border-primary-foreground/20">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-primary-foreground" />
+              <p className="text-primary-foreground/90 text-sm">
+                Se você está em situação de risco, ligue imediatamente
+              </p>
+            </div>
+          </div>
         </div>
       </header>
 
@@ -95,7 +108,7 @@ const Emergencia: React.FC = () => {
         </Card>
 
         <p className="text-center text-xs text-muted-foreground mt-6 px-4">
-          Você não está sozinha. Buscar ajuda é um ato de coragem. 💜
+          Você não está sozinha. Pedir ajuda é um ato de força e coragem.
         </p>
       </main>
 
