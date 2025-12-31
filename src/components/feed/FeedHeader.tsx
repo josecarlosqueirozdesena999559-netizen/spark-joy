@@ -22,23 +22,26 @@ const FeedHeader: React.FC<FeedHeaderProps> = ({ avatarIcon }) => {
   const navigate = useNavigate();
 
   return (
-    <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-md border-b border-border/50">
-      <div className="flex items-center justify-between px-4 h-14 max-w-md mx-auto">
-        {/* Logo */}
+    <header 
+      className="sticky top-0 z-40 w-full"
+      style={{ backgroundColor: '#e91e63' }}
+    >
+      <div className="flex items-center justify-center px-4 h-14 relative">
+        {/* Logo - Centralizado */}
         <div className="flex items-center gap-2">
-          <Heart className="w-5 h-5 text-primary" fill="currentColor" />
+          <Heart className="w-5 h-5 text-white" fill="currentColor" />
           <h1 
-            className="text-xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent"
+            className="text-xl font-bold text-white"
             style={{ fontFamily: 'Georgia, serif' }}
           >
             PorElas
           </h1>
         </div>
         
-        {/* Avatar - Direct to profile */}
+        {/* Avatar - Posição absoluta à direita */}
         <button 
           onClick={() => navigate('/perfil')}
-          className="w-9 h-9 bg-secondary rounded-full flex items-center justify-center text-base ring-2 ring-primary/30 hover:ring-primary/50 transition-all focus:outline-none focus:ring-primary/50"
+          className="absolute right-4 w-9 h-9 bg-white/20 rounded-full flex items-center justify-center text-base ring-2 ring-white/40 hover:ring-white/60 transition-all focus:outline-none focus:ring-white/60"
         >
           {avatarIcons[avatarIcon] || '❤️'}
         </button>

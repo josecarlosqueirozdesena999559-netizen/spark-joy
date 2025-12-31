@@ -1,10 +1,9 @@
 import React from 'react';
-import { Phone, AlertTriangle, ExternalLink } from 'lucide-react';
+import { Phone, Siren, ExternalLink, Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import BottomNav from '@/components/layout/BottomNav';
 import { MotivationalBanner } from '@/components/shared/MotivationalBanner';
-import porelasLogo from '@/assets/porelas-logo.png';
 
 const emergencyContacts = [
   {
@@ -40,31 +39,37 @@ const Emergencia: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-background safe-area-inset pb-20">
-      <header className="gradient-primary">
-        <div className="px-4 py-6 max-w-lg mx-auto">
-          <div className="flex items-center gap-3 mb-4">
-            <img 
-              src={porelasLogo} 
-              alt="PorElas" 
-              className="w-10 h-10 object-cover rounded-full"
-            />
-            <div>
-              <h1 className="text-lg font-bold text-primary-foreground">Emergência</h1>
-              <p className="text-primary-foreground/70 text-xs">Ajuda imediata quando você precisar</p>
-            </div>
-          </div>
-          <div className="bg-primary-foreground/10 backdrop-blur-sm rounded-xl p-3 border border-primary-foreground/20">
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="w-5 h-5 text-primary-foreground" />
-              <p className="text-primary-foreground/90 text-sm">
-                Se você está em situação de risco, ligue imediatamente
-              </p>
-            </div>
+      {/* Header estilo nativo */}
+      <header 
+        className="sticky top-0 z-40 w-full"
+        style={{ backgroundColor: '#e91e63' }}
+      >
+        <div className="flex items-center justify-center px-4 h-14 relative">
+          <div className="flex items-center gap-2">
+            <Siren className="w-5 h-5 text-white" />
+            <h1 
+              className="text-xl font-bold text-white"
+              style={{ fontFamily: 'Georgia, serif' }}
+            >
+              SOS Emergência
+            </h1>
           </div>
         </div>
       </header>
 
-      <main className="max-w-lg mx-auto px-4 py-6 -mt-4">
+      {/* Alerta de emergência */}
+      <div className="bg-red-50 border-b border-red-200 px-4 py-3">
+        <div className="flex items-center gap-2 max-w-lg mx-auto">
+          <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center shrink-0">
+            <Phone className="w-4 h-4 text-red-600" />
+          </div>
+          <p className="text-red-800 text-sm font-medium">
+            Se você está em situação de risco, ligue imediatamente para um dos números abaixo
+          </p>
+        </div>
+      </div>
+
+      <main className="max-w-lg mx-auto px-4 py-4">
         <MotivationalBanner />
         
         <div className="space-y-3">
