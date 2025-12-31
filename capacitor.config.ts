@@ -2,10 +2,10 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'app.lovable.5bfb496e25b84319abc28cd3e86ee28c',
-  appName: 'A Lovable project',
+  appName: 'Por Elas',
   webDir: 'dist',
   server: {
-    url: 'https://5bfb496e-25b8-4319-abc2-8cd3e86ee28c.lovableproject.com?forceHideBadge=true',
+    url: 'https://www.porelas.online',
     cleartext: true
   },
   plugins: {
