@@ -6,6 +6,10 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import Auth from "./pages/Auth";
 import Home from "./pages/Home";
+import Mapa from "./pages/Mapa";
+import Conteudo from "./pages/Conteudo";
+import Emergencia from "./pages/Emergencia";
+import Perfil from "./pages/Perfil";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -39,6 +43,38 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute>
             <Home />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/mapa"
+        element={
+          <ProtectedRoute>
+            <Mapa />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/conteudo"
+        element={
+          <ProtectedRoute>
+            <Conteudo />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/emergencia"
+        element={
+          <ProtectedRoute>
+            <Emergencia />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/perfil"
+        element={
+          <ProtectedRoute>
+            <Perfil />
           </ProtectedRoute>
         }
       />
