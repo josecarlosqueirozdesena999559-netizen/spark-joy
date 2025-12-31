@@ -16,6 +16,47 @@ export const GenerateReportButton = ({ items, decryptContent }: GenerateReportBu
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
+  // Helper function to load image as base64
+  const loadImageAsBase64 = (url: string): Promise<string | null> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          const maxWidth = 300;
+          const maxHeight = 200;
+          let width = img.width;
+          let height = img.height;
+          
+          // Scale down if needed
+          if (width > maxWidth) {
+            height = (maxWidth / width) * height;
+            width = maxWidth;
+          }
+          if (height > maxHeight) {
+            width = (maxHeight / height) * width;
+            height = maxHeight;
+          }
+          
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+            resolve(canvas.toDataURL('image/jpeg', 0.7));
+          } else {
+            resolve(null);
+          }
+        } catch {
+          resolve(null);
+        }
+      };
+      img.onerror = () => resolve(null);
+      img.src = url;
+    });
+  };
+
   const generateReport = async () => {
     if (items.length === 0) {
       toast({
@@ -28,6 +69,10 @@ export const GenerateReportButton = ({ items, decryptContent }: GenerateReportBu
 
     setLoading(true);
     
+    toast({
+      title: 'Gerando relatório...',
+      description: 'Carregando imagens e preparando o documento.',
+    });
     try {
       const { default: jsPDF } = await import('jspdf');
       
@@ -175,23 +220,60 @@ export const GenerateReportButton = ({ items, decryptContent }: GenerateReportBu
             }
           }
 
-          // Try to embed image if it's a photo
+          // Embed image if it's a photo
           if (item.item_type === 'photo' && decryptedPath) {
             try {
               const { data } = supabase.storage.from('vault-files').getPublicUrl(decryptedPath);
               if (data?.publicUrl) {
-                // Add placeholder text for image (actual embedding requires base64)
-                doc.setFillColor(240, 240, 240);
-                doc.roundedRect(25, yPosition, 80, 50, 2, 2, 'F');
-                doc.setFontSize(8);
-                doc.setTextColor(120, 120, 120);
-                doc.text('[Imagem anexada - visualizar no cofre digital]', 65, yPosition + 25, { align: 'center' });
-                doc.text(decryptedName || 'Arquivo de imagem', 65, yPosition + 32, { align: 'center' });
-                yPosition += 55;
+                const base64Image = await loadImageAsBase64(data.publicUrl);
+                
+                if (base64Image) {
+                  // Check if we need a new page for the image
+                  if (yPosition > pageHeight - 80) {
+                    doc.addPage();
+                    currentPage++;
+                    addHeader();
+                    yPosition = 30;
+                  }
+                  
+                  // Add image border
+                  doc.setDrawColor(200, 200, 200);
+                  doc.setLineWidth(0.5);
+                  doc.roundedRect(24, yPosition - 1, 82, 52, 2, 2, 'S');
+                  
+                  // Add the actual image
+                  doc.addImage(base64Image, 'JPEG', 25, yPosition, 80, 50);
+                  yPosition += 55;
+                } else {
+                  // Fallback placeholder if image couldn't be loaded
+                  doc.setFillColor(245, 245, 245);
+                  doc.roundedRect(25, yPosition, 80, 30, 2, 2, 'F');
+                  doc.setFontSize(8);
+                  doc.setTextColor(120, 120, 120);
+                  doc.text('[Imagem protegida - consultar cofre digital]', 65, yPosition + 15, { align: 'center' });
+                  yPosition += 35;
+                }
               }
             } catch (e) {
-              // Skip image embedding on error
+              // Fallback placeholder on error
+              doc.setFillColor(245, 245, 245);
+              doc.roundedRect(25, yPosition, 80, 30, 2, 2, 'F');
+              doc.setFontSize(8);
+              doc.setTextColor(120, 120, 120);
+              doc.text('[Imagem protegida - consultar cofre digital]', 65, yPosition + 15, { align: 'center' });
+              yPosition += 35;
             }
+          }
+          
+          // Video placeholder
+          if (item.item_type === 'video' && decryptedPath) {
+            doc.setFillColor(240, 240, 250);
+            doc.roundedRect(25, yPosition, 80, 30, 2, 2, 'F');
+            doc.setFontSize(8);
+            doc.setTextColor(100, 100, 120);
+            doc.text('[Vídeo anexado - consultar cofre digital]', 65, yPosition + 12, { align: 'center' });
+            doc.text(decryptedName || 'Arquivo de vídeo', 65, yPosition + 20, { align: 'center' });
+            yPosition += 35;
           }
         }
 
