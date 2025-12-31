@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Heart } from 'lucide-react';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { SignUpForm } from '@/components/auth/SignUpForm';
 import { SignInForm } from '@/components/auth/SignInForm';
 import { ForgotPasswordForm } from '@/components/auth/ForgotPasswordForm';
@@ -9,6 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Capacitor } from '@capacitor/core';
 import { SplashScreen as CapacitorSplash } from '@capacitor/splash-screen';
 import { SplashScreen } from '@/components/auth/SplashScreen';
+import porelasLogo from '@/assets/porelas-logo.png';
 
 type AuthView = 'splash' | 'login' | 'signup' | 'forgot-password';
 
@@ -49,12 +48,13 @@ const Auth: React.FC = () => {
     <div className="min-h-screen flex flex-col items-center justify-center px-4 py-6 gradient-soft safe-area-inset">
       <div className="w-full max-w-sm">
         <div className="text-center mb-6">
-          <div className="flex items-center justify-center gap-2 mb-3">
-            <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center">
-              <Heart className="w-6 h-6 text-primary-foreground" fill="currentColor" />
-            </div>
+          <div className="flex items-center justify-center mb-3">
+            <img 
+              src={porelasLogo} 
+              alt="PorElas" 
+              className="w-24 h-24 object-contain"
+            />
           </div>
-          <h1 className="text-2xl font-bold text-foreground">PorElas</h1>
           <p className="text-sm text-muted-foreground mt-1">
             {view === 'login' && 'Bem-vinda de volta'}
             {view === 'signup' && 'Crie sua conta'}

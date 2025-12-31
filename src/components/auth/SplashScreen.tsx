@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Heart, Shield } from 'lucide-react';
+import { Shield } from 'lucide-react';
+import porelasLogo from '@/assets/porelas-logo.png';
 
 interface SplashScreenProps {
   onComplete: () => void;
@@ -23,23 +24,20 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete }) => {
         fadeOut ? 'opacity-0' : 'opacity-100'
       }`}
     >
-      <div className="flex flex-col items-center gap-6 animate-fade-in">
+      <div className="flex flex-col items-center gap-4 animate-fade-in">
         <div className="relative">
           <div className="absolute inset-0 bg-primary-foreground/20 rounded-full blur-2xl scale-150" />
-          <div className="relative flex items-center justify-center w-24 h-24 bg-primary-foreground/10 rounded-full backdrop-blur-sm border border-primary-foreground/20">
-            <Heart className="w-12 h-12 text-primary-foreground animate-pulse-soft" fill="currentColor" />
-          </div>
+          <img 
+            src={porelasLogo} 
+            alt="PorElas" 
+            className="relative w-40 h-40 object-contain drop-shadow-lg"
+          />
         </div>
         
-        <div className="text-center space-y-2">
-          <h1 className="text-4xl font-bold text-primary-foreground tracking-tight">
-            PorElas
-          </h1>
-          <p className="text-primary-foreground/80 text-sm font-medium flex items-center gap-2 justify-center">
-            <Shield className="w-4 h-4" />
-            Proteção e apoio
-          </p>
-        </div>
+        <p className="text-primary-foreground/80 text-sm font-medium flex items-center gap-2 justify-center">
+          <Shield className="w-4 h-4" />
+          Proteção e apoio
+        </p>
       </div>
 
       <div className="absolute bottom-12 flex flex-col items-center gap-2">
