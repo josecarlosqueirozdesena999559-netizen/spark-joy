@@ -15,6 +15,7 @@ import Emergencia from "./pages/Emergencia";
 import Perfil from "./pages/Perfil";
 import Notificacoes from "./pages/Notificacoes";
 import Chat from "./pages/Chat";
+import Termos from "./pages/Termos";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -113,6 +114,7 @@ const AppRoutes = () => {
           </ProtectedRoute>
         }
       />
+      <Route path="/termos" element={<Termos />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

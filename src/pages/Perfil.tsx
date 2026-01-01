@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, LogOut, Pencil, Shield, Trash2, ExternalLink } from 'lucide-react';
+import { ArrowLeft, LogOut, Pencil, Shield, Trash2, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
@@ -146,13 +146,22 @@ const Perfil: React.FC = () => {
         {/* Footer */}
         <div className="text-center py-6 text-xs text-muted-foreground space-y-2">
           <p className="font-medium">PorElas v1.0.0</p>
-          <a 
-            href="/termos" 
-            className="inline-flex items-center gap-1 text-primary hover:underline"
-          >
-            Termos de Uso
-            <ExternalLink className="w-3 h-3" />
-          </a>
+          <div className="flex items-center justify-center gap-4">
+            <button
+              onClick={() => navigate('/termos')}
+              className="inline-flex items-center gap-1 text-primary hover:underline"
+            >
+              <FileText className="w-3 h-3" />
+              Termos de Uso
+            </button>
+            <button
+              onClick={() => navigate('/termos')}
+              className="inline-flex items-center gap-1 text-primary hover:underline"
+            >
+              <Shield className="w-3 h-3" />
+              Privacidade
+            </button>
+          </div>
         </div>
       </main>
 
