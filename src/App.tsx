@@ -16,6 +16,7 @@ import Perfil from "./pages/Perfil";
 import Notificacoes from "./pages/Notificacoes";
 import Chat from "./pages/Chat";
 import Termos from "./pages/Termos";
+import FAQ from "./pages/FAQ";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -115,6 +116,7 @@ const AppRoutes = () => {
         }
       />
       <Route path="/termos" element={<Termos />} />
+      <Route path="/faq" element={<FAQ />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

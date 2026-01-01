@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, LogOut, Pencil, Shield, Trash2, FileText } from 'lucide-react';
+import { ArrowLeft, LogOut, Pencil, Shield, Trash2, FileText, HelpCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
@@ -146,13 +146,13 @@ const Perfil: React.FC = () => {
         {/* Footer */}
         <div className="text-center py-6 text-xs text-muted-foreground space-y-2">
           <p className="font-medium">PorElas v1.0.0</p>
-          <div className="flex items-center justify-center gap-4">
+          <div className="flex items-center justify-center gap-4 flex-wrap">
             <button
               onClick={() => navigate('/termos')}
               className="inline-flex items-center gap-1 text-primary hover:underline"
             >
               <FileText className="w-3 h-3" />
-              Termos de Uso
+              Termos
             </button>
             <button
               onClick={() => navigate('/termos')}
@@ -160,6 +160,13 @@ const Perfil: React.FC = () => {
             >
               <Shield className="w-3 h-3" />
               Privacidade
+            </button>
+            <button
+              onClick={() => navigate('/faq')}
+              className="inline-flex items-center gap-1 text-primary hover:underline"
+            >
+              <HelpCircle className="w-3 h-3" />
+              FAQ
             </button>
           </div>
         </div>
