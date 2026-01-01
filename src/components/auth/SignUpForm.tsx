@@ -35,7 +35,6 @@ export const SignUpForm: React.FC<SignUpFormProps> = ({ onSuccess, onSwitchToLog
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
-  const [showEmailVerification, setShowEmailVerification] = useState(false);
   const { signUp } = useAuth();
   const { toast } = useToast();
 
@@ -106,38 +105,11 @@ export const SignUpForm: React.FC<SignUpFormProps> = ({ onSuccess, onSwitchToLog
         variant: 'destructive',
       });
     } else {
-      setIsRegistering(false);
-      setShowEmailVerification(true);
+      onSuccess();
     }
   };
 
   const progress = (step / 4) * 100;
-
-  // Email Verification Screen
-  if (showEmailVerification) {
-    return (
-      <div className="flex flex-col items-center justify-center py-12 space-y-6 animate-fade-in">
-        <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center">
-          <Mail className="w-10 h-10 text-primary" />
-        </div>
-        <div className="text-center space-y-3">
-          <h3 className="text-xl font-semibold text-foreground">Verifique seu e-mail</h3>
-          <p className="text-sm text-muted-foreground max-w-xs">
-            Enviamos um link de confirmação para <strong className="text-foreground">{email}</strong>. 
-            Clique no link para ativar sua conta.
-          </p>
-        </div>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={onSwitchToLogin}
-          className="rounded-full"
-        >
-          Voltar para o login
-        </Button>
-      </div>
-    );
-  }
 
   // Registration Animation Screen
   if (isRegistering) {
