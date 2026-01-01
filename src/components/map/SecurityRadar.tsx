@@ -1,14 +1,15 @@
-import React, { useEffect } from 'react';
-import { Shield, Navigation, Phone, MapPin, RefreshCw, Loader2, AlertTriangle, Radar } from 'lucide-react';
+import React, { useEffect, useState, useCallback } from 'react';
+import Map, { Marker, Popup, NavigationControl, GeolocateControl } from 'react-map-gl/mapbox';
+import { Shield, Navigation, Phone, RefreshCw, Loader2, AlertTriangle, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { usePoliceStations, PoliceStation } from '@/hooks/usePoliceStations';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import 'mapbox-gl/dist/mapbox-gl.css';
 
-// Calculate distance between two coordinates in km
+const MAPBOX_TOKEN = 'pk.eyJ1Ijoiam9zZWNhcmxvc3FqZGZuZiIsImEiOiJjbWp2dnZzNjI1bHYyM2VwczV2eXFiZzNzIn0.tkqBfgDN54sp53HwuM6gGw';
+
 function calculateDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
-  const R = 6371; // Earth's radius in km
+  const R = 6371;
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLng = (lng2 - lng1) * Math.PI / 180;
   const a = 
@@ -30,72 +31,14 @@ interface StationWithDistance extends PoliceStation {
   distance: number;
 }
 
-interface StationRadarCardProps {
-  station: StationWithDistance;
-}
-
-const StationRadarCard: React.FC<StationRadarCardProps> = ({ station }) => {
-  const handleDirections = () => {
-    const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${station.lat},${station.lng}`;
-    window.open(googleMapsUrl, '_blank');
-  };
-
-  const handleCall = () => {
-    if (station.phone) {
-      window.location.href = `tel:${station.phone.replace(/\s/g, '')}`;
-    }
-  };
-
-  return (
-    <Card className="border-border/50 bg-card/80 backdrop-blur-sm hover:bg-card/95 transition-colors">
-      <CardContent className="p-4">
-        <div className="flex items-start gap-3">
-          <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-            <Shield className="w-6 h-6 text-primary" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-start justify-between gap-2">
-              <h3 className="font-semibold text-foreground leading-tight">{station.name}</h3>
-              <span className="text-xs font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-full shrink-0">
-                {formatDistance(station.distance)}
-              </span>
-            </div>
-            <p className="text-sm text-muted-foreground mt-0.5">{station.type}</p>
-            {station.phone && (
-              <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-                <Phone className="w-3 h-3" />
-                {station.phone}
-              </p>
-            )}
-          </div>
-        </div>
-
-        <div className="flex gap-2 mt-4">
-          <Button
-            className="flex-1 gap-2 h-11"
-            onClick={handleDirections}
-          >
-            <Navigation className="w-4 h-4" />
-            Como Chegar
-          </Button>
-          
-          {station.phone && (
-            <Button
-              variant="secondary"
-              className="flex-1 gap-2 h-11"
-              onClick={handleCall}
-            >
-              <Phone className="w-4 h-4" />
-              Ligar
-            </Button>
-          )}
-        </div>
-      </CardContent>
-    </Card>
-  );
-};
-
 const SecurityRadar: React.FC = () => {
+  const [selectedStation, setSelectedStation] = useState<StationWithDistance | null>(null);
+  const [viewState, setViewState] = useState({
+    longitude: -46.6333,
+    latitude: -23.5505,
+    zoom: 13,
+  });
+
   const {
     position,
     loading: geoLoading,
@@ -106,28 +49,38 @@ const SecurityRadar: React.FC = () => {
   const { stations, loading: stationsLoading, error: stationsError, fetchStations } =
     usePoliceStations();
 
-  // Fetch police stations when position is available
   useEffect(() => {
     if (position) {
+      setViewState(prev => ({
+        ...prev,
+        longitude: position.lng,
+        latitude: position.lat,
+      }));
       fetchStations(position.lat, position.lng, 20);
     }
   }, [position, fetchStations]);
 
-  const handleRefresh = () => {
+  const handleRefresh = useCallback(() => {
     refreshLocation();
     if (position) {
       fetchStations(position.lat, position.lng, 20);
     }
+  }, [refreshLocation, position, fetchStations]);
+
+  const handleDirections = (station: StationWithDistance) => {
+    const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${station.lat},${station.lng}`;
+    window.open(googleMapsUrl, '_blank');
   };
 
-  // Sort stations by distance
+  const handleCall = (phone: string) => {
+    window.location.href = `tel:${phone.replace(/\s/g, '')}`;
+  };
+
   const stationsWithDistance: StationWithDistance[] = position
-    ? stations
-        .map(station => ({
-          ...station,
-          distance: calculateDistance(position.lat, position.lng, station.lat, station.lng),
-        }))
-        .sort((a, b) => a.distance - b.distance)
+    ? stations.map(station => ({
+        ...station,
+        distance: calculateDistance(position.lat, position.lng, station.lat, station.lng),
+      }))
     : [];
 
   if (geoLoading) {
@@ -149,8 +102,7 @@ const SecurityRadar: React.FC = () => {
         </div>
         <h2 className="font-semibold text-foreground">Localização não disponível</h2>
         <p className="text-muted-foreground text-sm max-w-xs">
-          {geoError ||
-            "Não foi possível obter sua localização. Verifique as permissões do seu navegador."}
+          {geoError || "Não foi possível obter sua localização. Verifique as permissões do seu navegador."}
         </p>
         <Button onClick={refreshLocation} variant="outline" className="gap-2">
           <RefreshCw className="w-4 h-4" />
@@ -161,26 +113,130 @@ const SecurityRadar: React.FC = () => {
   }
 
   return (
-    <div className="flex-1 flex flex-col bg-background overflow-hidden">
-      {/* Header with stats */}
-      <div className="px-4 py-3 bg-card/50 border-b border-border">
-        <div className="flex items-center justify-between max-w-lg mx-auto">
+    <div className="flex-1 flex flex-col bg-background overflow-hidden relative">
+      {/* Map container */}
+      <div className="flex-1 relative">
+        <Map
+          {...viewState}
+          onMove={evt => setViewState(evt.viewState)}
+          mapStyle="mapbox://styles/mapbox/dark-v11"
+          mapboxAccessToken={MAPBOX_TOKEN}
+          style={{ width: '100%', height: '100%' }}
+        >
+          <NavigationControl position="top-right" />
+          <GeolocateControl position="top-right" trackUserLocation />
+
+          {/* User location marker */}
+          <Marker longitude={position.lng} latitude={position.lat}>
+            <div className="w-6 h-6 bg-primary rounded-full border-2 border-background shadow-lg flex items-center justify-center">
+              <div className="w-2 h-2 bg-background rounded-full" />
+            </div>
+          </Marker>
+
+          {/* Police station markers */}
+          {stationsWithDistance.map(station => (
+            <Marker
+              key={station.id}
+              longitude={station.lng}
+              latitude={station.lat}
+              anchor="bottom"
+              onClick={e => {
+                e.originalEvent.stopPropagation();
+                setSelectedStation(station);
+              }}
+            >
+              <div className="cursor-pointer transform hover:scale-110 transition-transform">
+                <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center shadow-lg border-2 border-background">
+                  <Shield className="w-5 h-5 text-primary-foreground" />
+                </div>
+              </div>
+            </Marker>
+          ))}
+
+          {/* Popup for selected station */}
+          {selectedStation && (
+            <Popup
+              longitude={selectedStation.lng}
+              latitude={selectedStation.lat}
+              anchor="bottom"
+              onClose={() => setSelectedStation(null)}
+              closeButton={true}
+              closeOnClick={false}
+              className="station-popup"
+            >
+              <div className="p-2 min-w-[200px]">
+                <h3 className="font-semibold text-foreground text-sm">{selectedStation.name}</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">{selectedStation.type}</p>
+                <p className="text-xs text-primary font-medium mt-1">
+                  {formatDistance(selectedStation.distance)}
+                </p>
+                {selectedStation.phone && (
+                  <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                    <Phone className="w-3 h-3" />
+                    {selectedStation.phone}
+                  </p>
+                )}
+                <div className="flex gap-2 mt-3">
+                  <Button
+                    size="sm"
+                    className="flex-1 gap-1 h-8 text-xs"
+                    onClick={() => handleDirections(selectedStation)}
+                  >
+                    <Navigation className="w-3 h-3" />
+                    Ir
+                  </Button>
+                  {selectedStation.phone && (
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      className="flex-1 gap-1 h-8 text-xs"
+                      onClick={() => handleCall(selectedStation.phone!)}
+                    >
+                      <Phone className="w-3 h-3" />
+                      Ligar
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </Popup>
+          )}
+        </Map>
+
+        {/* Loading overlay */}
+        {stationsLoading && (
+          <div className="absolute inset-0 bg-background/50 flex items-center justify-center">
+            <div className="bg-card p-4 rounded-lg shadow-lg flex items-center gap-3">
+              <Loader2 className="w-5 h-5 animate-spin text-primary" />
+              <span className="text-sm text-foreground">Buscando delegacias...</span>
+            </div>
+          </div>
+        )}
+
+        {/* Error overlay */}
+        {stationsError && (
+          <div className="absolute bottom-4 left-4 right-4 bg-destructive/10 border border-destructive/20 rounded-lg p-3 flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-destructive shrink-0" />
+            <span className="text-xs text-destructive flex-1">{stationsError}</span>
+            <Button size="sm" variant="ghost" onClick={handleRefresh} className="h-7 px-2">
+              <RefreshCw className="w-3 h-3" />
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {/* Bottom info bar */}
+      <div className="absolute bottom-20 left-4 right-4 bg-card/95 backdrop-blur-md rounded-xl p-3 border border-border/50 shadow-lg">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
-              <Radar className="w-4 h-4 text-primary" />
+              <Shield className="w-4 h-4 text-primary" />
             </div>
-            {stationsLoading ? (
-              <span className="text-sm text-muted-foreground">Buscando delegacias...</span>
-            ) : stationsError ? (
-              <span className="text-sm text-destructive flex items-center gap-1">
-                <AlertTriangle className="w-3 h-3" />
-                Erro ao carregar
-              </span>
-            ) : (
-              <span className="text-sm font-medium text-foreground">
-                {stations.length} delegacia{stations.length !== 1 ? 's' : ''} em 20km
-              </span>
-            )}
+            <div>
+              <p className="text-sm font-medium text-foreground">
+                {stationsWithDistance.length} delegacia{stationsWithDistance.length !== 1 ? 's' : ''} encontrada{stationsWithDistance.length !== 1 ? 's' : ''}
+              </p>
+              <p className="text-xs text-muted-foreground">em um raio de 20km</p>
+            </div>
           </div>
           <Button
             size="icon"
@@ -193,48 +249,6 @@ const SecurityRadar: React.FC = () => {
           </Button>
         </div>
       </div>
-
-      {/* Station list */}
-      <ScrollArea className="flex-1">
-        <div className="p-4 pb-24 max-w-lg mx-auto">
-          {stationsLoading ? (
-            <div className="flex flex-col items-center justify-center py-12 gap-3">
-              <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">Carregando delegacias próximas...</p>
-            </div>
-          ) : stationsError ? (
-            <div className="flex flex-col items-center justify-center py-12 gap-4 text-center">
-              <div className="w-12 h-12 bg-destructive/10 rounded-full flex items-center justify-center">
-                <AlertTriangle className="w-6 h-6 text-destructive" />
-              </div>
-              <p className="text-sm text-muted-foreground max-w-xs">{stationsError}</p>
-              <Button onClick={handleRefresh} variant="outline" size="sm" className="gap-2">
-                <RefreshCw className="w-4 h-4" />
-                Tentar novamente
-              </Button>
-            </div>
-          ) : stationsWithDistance.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 gap-4 text-center">
-              <div className="w-12 h-12 bg-muted rounded-full flex items-center justify-center">
-                <Shield className="w-6 h-6 text-muted-foreground" />
-              </div>
-              <p className="text-sm text-muted-foreground max-w-xs">
-                Nenhuma delegacia encontrada em um raio de 20km.
-              </p>
-              <Button onClick={handleRefresh} variant="outline" size="sm" className="gap-2">
-                <RefreshCw className="w-4 h-4" />
-                Atualizar
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {stationsWithDistance.map(station => (
-                <StationRadarCard key={station.id} station={station} />
-              ))}
-            </div>
-          )}
-        </div>
-      </ScrollArea>
     </div>
   );
 };
