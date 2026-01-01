@@ -13,6 +13,7 @@ import Cofre from "./pages/Cofre";
 import Conteudo from "./pages/Conteudo";
 import Emergencia from "./pages/Emergencia";
 import Perfil from "./pages/Perfil";
+import Notificacoes from "./pages/Notificacoes";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -92,6 +93,14 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute>
             <Perfil />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/notificacoes"
+        element={
+          <ProtectedRoute>
+            <Notificacoes />
           </ProtectedRoute>
         }
       />
