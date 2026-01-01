@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Heart, Loader2, MessageCircleHeart } from 'lucide-react';
+import { Heart, Loader2, MessagesSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFeed } from '@/hooks/useFeed';
@@ -161,10 +161,11 @@ const Home: React.FC = () => {
       {/* Floating Chat Button */}
       <Button
         onClick={() => navigate('/chat')}
-        className="fixed right-4 bottom-24 z-50 h-14 w-14 rounded-full shadow-lg"
+        className="fixed right-4 bottom-24 z-50 h-14 w-14 rounded-full shadow-lg bg-primary hover:bg-primary/90"
         size="icon"
+        aria-label="Chat de Acolhimento"
       >
-        <MessageCircleHeart className="h-6 w-6" />
+        <MessagesSquare className="h-6 w-6" />
       </Button>
 
       {/* Report Dialog */}
