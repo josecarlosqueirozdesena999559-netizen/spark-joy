@@ -98,11 +98,6 @@ const CreatePostForm: React.FC<CreatePostFormProps> = ({ userId, userAvatar, onP
       removeImage();
       setIsFocused(false);
       onPostCreated();
-      
-      toast({
-        title: 'Publicado!',
-        description: 'Sua história foi compartilhada com a comunidade.',
-      });
     } catch (error) {
       console.error('Error creating post:', error);
       toast({
