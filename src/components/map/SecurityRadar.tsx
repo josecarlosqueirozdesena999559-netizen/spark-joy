@@ -1,8 +1,9 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import Map, { Marker, Popup, NavigationControl, GeolocateControl, Source, Layer } from 'react-map-gl/mapbox';
 import type { MapRef } from 'react-map-gl/mapbox';
-import { Shield, Navigation, Phone, RefreshCw, Loader2, AlertTriangle, MapPin, X, Clock, Route } from 'lucide-react';
+import { Shield, Navigation, Phone, RefreshCw, Loader2, AlertTriangle, MapPin, X, Clock, Route, ChevronUp, ChevronDown, CornerUpRight, CornerUpLeft, ArrowUp, RotateCcw, Flag, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { usePoliceStations, PoliceStation } from '@/hooks/usePoliceStations';
 import 'mapbox-gl/dist/mapbox-gl.css';
@@ -28,6 +29,13 @@ function formatDistance(km: number): string {
   return `${km.toFixed(1)} km`;
 }
 
+function formatMeters(meters: number): string {
+  if (meters < 1000) {
+    return `${Math.round(meters)} m`;
+  }
+  return `${(meters / 1000).toFixed(1)} km`;
+}
+
 function formatDuration(seconds: number): string {
   const minutes = Math.round(seconds / 60);
   if (minutes < 60) {
@@ -38,8 +46,67 @@ function formatDuration(seconds: number): string {
   return `${hours}h ${remainingMinutes}min`;
 }
 
+// Get icon for maneuver type
+function getManeuverIcon(type: string, modifier?: string) {
+  if (type === 'arrive') return Flag;
+  if (type === 'depart') return Play;
+  if (type === 'turn') {
+    if (modifier?.includes('left')) return CornerUpLeft;
+    if (modifier?.includes('right')) return CornerUpRight;
+    return RotateCcw;
+  }
+  if (type === 'end of road' || type === 'fork' || type === 'merge') {
+    if (modifier?.includes('left')) return CornerUpLeft;
+    if (modifier?.includes('right')) return CornerUpRight;
+  }
+  if (type === 'roundabout' || type === 'rotary') return RotateCcw;
+  return ArrowUp;
+}
+
+// Translate maneuver instructions to Portuguese
+function translateInstruction(instruction: string): string {
+  return instruction
+    .replace(/Turn left/gi, 'Vire à esquerda')
+    .replace(/Turn right/gi, 'Vire à direita')
+    .replace(/Continue straight/gi, 'Continue em frente')
+    .replace(/Continue/gi, 'Continue')
+    .replace(/Head/gi, 'Siga')
+    .replace(/north/gi, 'norte')
+    .replace(/south/gi, 'sul')
+    .replace(/east/gi, 'leste')
+    .replace(/west/gi, 'oeste')
+    .replace(/onto/gi, 'na')
+    .replace(/on/gi, 'na')
+    .replace(/toward/gi, 'em direção a')
+    .replace(/You have arrived/gi, 'Você chegou ao destino')
+    .replace(/Your destination is on the/gi, 'Seu destino está à')
+    .replace(/left/gi, 'esquerda')
+    .replace(/right/gi, 'direita')
+    .replace(/slight left/gi, 'ligeiramente à esquerda')
+    .replace(/slight right/gi, 'ligeiramente à direita')
+    .replace(/sharp left/gi, 'curva fechada à esquerda')
+    .replace(/sharp right/gi, 'curva fechada à direita')
+    .replace(/Take the/gi, 'Pegue a')
+    .replace(/exit/gi, 'saída')
+    .replace(/roundabout/gi, 'rotatória')
+    .replace(/at the roundabout/gi, 'na rotatória')
+    .replace(/Keep/gi, 'Mantenha-se')
+    .replace(/Merge/gi, 'Entre');
+}
+
 interface StationWithDistance extends PoliceStation {
   distance: number;
+}
+
+interface RouteStep {
+  instruction: string;
+  distance: number;
+  duration: number;
+  maneuver: {
+    type: string;
+    modifier?: string;
+    location: [number, number];
+  };
 }
 
 interface RouteInfo {
@@ -47,6 +114,7 @@ interface RouteInfo {
   distance: number;
   duration: number;
   station: StationWithDistance;
+  steps: RouteStep[];
 }
 
 const SecurityRadar: React.FC = () => {
@@ -54,6 +122,9 @@ const SecurityRadar: React.FC = () => {
   const [selectedStation, setSelectedStation] = useState<StationWithDistance | null>(null);
   const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null);
   const [loadingRoute, setLoadingRoute] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
+  const [currentStepIndex, setCurrentStepIndex] = useState(0);
+  const [showAllSteps, setShowAllSteps] = useState(false);
   const [viewState, setViewState] = useState({
     longitude: -46.6333,
     latitude: -23.5505,
@@ -81,6 +152,35 @@ const SecurityRadar: React.FC = () => {
     }
   }, [position, fetchStations]);
 
+  // Update current step based on user position during navigation
+  useEffect(() => {
+    if (!isNavigating || !position || !routeInfo) return;
+
+    // Find the closest step to the current position
+    let closestStepIndex = currentStepIndex;
+    let minDistance = Infinity;
+
+    routeInfo.steps.forEach((step, index) => {
+      if (index >= currentStepIndex) {
+        const stepDistance = calculateDistance(
+          position.lat,
+          position.lng,
+          step.maneuver.location[1],
+          step.maneuver.location[0]
+        );
+        if (stepDistance < minDistance) {
+          minDistance = stepDistance;
+          closestStepIndex = index;
+        }
+      }
+    });
+
+    // Update step if user is within 50 meters of the next maneuver
+    if (minDistance < 0.05 && closestStepIndex > currentStepIndex) {
+      setCurrentStepIndex(closestStepIndex);
+    }
+  }, [position, isNavigating, routeInfo, currentStepIndex]);
+
   const handleRefresh = useCallback(() => {
     refreshLocation();
     if (position) {
@@ -94,18 +194,30 @@ const SecurityRadar: React.FC = () => {
     setLoadingRoute(true);
     try {
       const response = await fetch(
-        `https://api.mapbox.com/directions/v5/mapbox/driving/${position.lng},${position.lat};${station.lng},${station.lat}?geometries=geojson&access_token=${MAPBOX_TOKEN}`
+        `https://api.mapbox.com/directions/v5/mapbox/driving/${position.lng},${position.lat};${station.lng},${station.lat}?geometries=geojson&steps=true&language=pt&access_token=${MAPBOX_TOKEN}`
       );
       
       const data = await response.json();
       
       if (data.routes && data.routes.length > 0) {
         const route = data.routes[0];
+        const steps: RouteStep[] = route.legs[0].steps.map((step: any) => ({
+          instruction: step.maneuver.instruction,
+          distance: step.distance,
+          duration: step.duration,
+          maneuver: {
+            type: step.maneuver.type,
+            modifier: step.maneuver.modifier,
+            location: step.maneuver.location,
+          },
+        }));
+
         setRouteInfo({
           geometry: route.geometry,
-          distance: route.distance / 1000, // Convert to km
+          distance: route.distance / 1000,
           duration: route.duration,
           station,
+          steps,
         });
 
         // Fit map to show the route
@@ -122,7 +234,7 @@ const SecurityRadar: React.FC = () => {
           );
 
           mapRef.current.fitBounds(bounds, {
-            padding: { top: 100, bottom: 200, left: 50, right: 50 },
+            padding: { top: 100, bottom: 280, left: 50, right: 50 },
             duration: 1000,
           });
         }
@@ -139,8 +251,26 @@ const SecurityRadar: React.FC = () => {
     fetchRoute(station);
   };
 
+  const handleStartNavigation = () => {
+    setIsNavigating(true);
+    setCurrentStepIndex(0);
+    setShowAllSteps(false);
+    
+    // Zoom to current position with higher zoom for navigation
+    if (position) {
+      setViewState({
+        longitude: position.lng,
+        latitude: position.lat,
+        zoom: 17,
+      });
+    }
+  };
+
   const handleClearRoute = () => {
     setRouteInfo(null);
+    setIsNavigating(false);
+    setCurrentStepIndex(0);
+    setShowAllSteps(false);
     if (position) {
       setViewState(prev => ({
         ...prev,
@@ -153,11 +283,6 @@ const SecurityRadar: React.FC = () => {
 
   const handleCall = (phone: string) => {
     window.location.href = `tel:${phone.replace(/\s/g, '')}`;
-  };
-
-  const handleOpenGoogleMaps = (station: StationWithDistance) => {
-    const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${station.lat},${station.lng}`;
-    window.open(googleMapsUrl, '_blank');
   };
 
   const stationsWithDistance: StationWithDistance[] = position
@@ -196,6 +321,9 @@ const SecurityRadar: React.FC = () => {
     );
   }
 
+  const currentStep = routeInfo?.steps[currentStepIndex];
+  const nextStep = routeInfo?.steps[currentStepIndex + 1];
+
   return (
     <div className="flex-1 flex flex-col bg-background overflow-hidden relative">
       {/* Map container */}
@@ -228,12 +356,25 @@ const SecurityRadar: React.FC = () => {
               }}
             >
               <Layer
+                id="route-line-bg"
+                type="line"
+                paint={{
+                  'line-color': '#1e1e2e',
+                  'line-width': 8,
+                  'line-opacity': 0.8,
+                }}
+                layout={{
+                  'line-join': 'round',
+                  'line-cap': 'round',
+                }}
+              />
+              <Layer
                 id="route-line"
                 type="line"
                 paint={{
                   'line-color': '#ec4899',
                   'line-width': 5,
-                  'line-opacity': 0.9,
+                  'line-opacity': 1,
                 }}
                 layout={{
                   'line-join': 'round',
@@ -246,9 +387,9 @@ const SecurityRadar: React.FC = () => {
           {/* User location marker */}
           <Marker longitude={position.lng} latitude={position.lat}>
             <div className="relative">
-              <div className="absolute -inset-3 bg-primary/20 rounded-full animate-ping" />
-              <div className="w-6 h-6 bg-primary rounded-full border-3 border-background shadow-lg flex items-center justify-center relative z-10">
-                <div className="w-2 h-2 bg-background rounded-full" />
+              <div className="absolute -inset-4 bg-primary/20 rounded-full animate-ping" />
+              <div className="w-7 h-7 bg-primary rounded-full border-3 border-background shadow-lg flex items-center justify-center relative z-10">
+                <Navigation className="w-3.5 h-3.5 text-primary-foreground" />
               </div>
             </div>
           </Marker>
@@ -262,7 +403,9 @@ const SecurityRadar: React.FC = () => {
               anchor="bottom"
               onClick={e => {
                 e.originalEvent.stopPropagation();
-                setSelectedStation(station);
+                if (!isNavigating) {
+                  setSelectedStation(station);
+                }
               }}
             >
               <div className="cursor-pointer transform hover:scale-110 transition-transform">
@@ -351,8 +494,121 @@ const SecurityRadar: React.FC = () => {
         )}
       </div>
 
-      {/* Route info panel */}
-      {routeInfo && (
+      {/* Navigation panel - Active navigation mode */}
+      {routeInfo && isNavigating && currentStep && (
+        <div className="absolute bottom-20 left-4 right-4 bg-card/95 backdrop-blur-md rounded-xl border border-border/50 shadow-lg overflow-hidden">
+          {/* Current instruction */}
+          <div className="p-4 bg-primary/10 border-b border-border/50">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 bg-primary rounded-xl flex items-center justify-center shrink-0">
+                {React.createElement(getManeuverIcon(currentStep.maneuver.type, currentStep.maneuver.modifier), {
+                  className: "w-7 h-7 text-primary-foreground"
+                })}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-lg font-bold text-foreground leading-tight">
+                  {translateInstruction(currentStep.instruction)}
+                </p>
+                <p className="text-sm text-primary font-medium mt-1">
+                  {formatMeters(currentStep.distance)}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Next step preview */}
+          {nextStep && (
+            <div className="px-4 py-3 flex items-center gap-3 border-b border-border/50">
+              <div className="w-8 h-8 bg-muted rounded-lg flex items-center justify-center shrink-0">
+                {React.createElement(getManeuverIcon(nextStep.maneuver.type, nextStep.maneuver.modifier), {
+                  className: "w-4 h-4 text-muted-foreground"
+                })}
+              </div>
+              <p className="text-sm text-muted-foreground flex-1 truncate">
+                Depois: {translateInstruction(nextStep.instruction)}
+              </p>
+              <span className="text-xs text-muted-foreground shrink-0">
+                {formatMeters(nextStep.distance)}
+              </span>
+            </div>
+          )}
+
+          {/* Expandable steps list */}
+          <div className="px-4 py-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full justify-between h-8"
+              onClick={() => setShowAllSteps(!showAllSteps)}
+            >
+              <span className="text-xs text-muted-foreground">
+                Passo {currentStepIndex + 1} de {routeInfo.steps.length}
+              </span>
+              {showAllSteps ? (
+                <ChevronDown className="w-4 h-4" />
+              ) : (
+                <ChevronUp className="w-4 h-4" />
+              )}
+            </Button>
+          </div>
+
+          {showAllSteps && (
+            <ScrollArea className="max-h-48 border-t border-border/50">
+              <div className="p-2 space-y-1">
+                {routeInfo.steps.map((step, index) => {
+                  const StepIcon = getManeuverIcon(step.maneuver.type, step.maneuver.modifier);
+                  const isActive = index === currentStepIndex;
+                  const isPast = index < currentStepIndex;
+                  
+                  return (
+                    <div
+                      key={index}
+                      className={`flex items-center gap-3 p-2 rounded-lg transition-colors ${
+                        isActive ? 'bg-primary/10' : isPast ? 'opacity-50' : ''
+                      }`}
+                    >
+                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
+                        isActive ? 'bg-primary' : 'bg-muted'
+                      }`}>
+                        <StepIcon className={`w-3.5 h-3.5 ${isActive ? 'text-primary-foreground' : 'text-muted-foreground'}`} />
+                      </div>
+                      <p className={`text-xs flex-1 ${isActive ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
+                        {translateInstruction(step.instruction)}
+                      </p>
+                      <span className="text-xs text-muted-foreground shrink-0">
+                        {formatMeters(step.distance)}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </ScrollArea>
+          )}
+
+          {/* Bottom actions */}
+          <div className="p-3 border-t border-border/50 flex items-center gap-3">
+            <div className="flex-1">
+              <div className="flex items-center gap-3 text-sm">
+                <span className="text-primary font-semibold">{formatDistance(routeInfo.distance)}</span>
+                <span className="text-muted-foreground">•</span>
+                <span className="text-muted-foreground">{formatDuration(routeInfo.duration)}</span>
+              </div>
+            </div>
+            <Button
+              size="sm"
+              variant="destructive"
+              className="gap-1.5"
+              onClick={handleClearRoute}
+            >
+              <X className="w-4 h-4" />
+              Encerrar
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Route preview panel - Before starting navigation */}
+      {routeInfo && !isNavigating && (
         <div className="absolute bottom-20 left-4 right-4 bg-card/95 backdrop-blur-md rounded-xl border border-border/50 shadow-lg overflow-hidden">
           <div className="p-4">
             <div className="flex items-start justify-between gap-3">
@@ -379,24 +635,27 @@ const SecurityRadar: React.FC = () => {
                 <Clock className="w-4 h-4" />
                 <span className="text-sm">{formatDuration(routeInfo.duration)}</span>
               </div>
+              <div className="flex items-center gap-1.5 text-muted-foreground">
+                <Navigation className="w-4 h-4" />
+                <span className="text-sm">{routeInfo.steps.length} passos</span>
+              </div>
             </div>
 
             <div className="flex gap-2 mt-4">
               <Button
-                className="flex-1 gap-2 h-10"
-                onClick={() => handleOpenGoogleMaps(routeInfo.station)}
+                className="flex-1 gap-2 h-11"
+                onClick={handleStartNavigation}
               >
-                <Navigation className="w-4 h-4" />
-                Abrir no Google Maps
+                <Play className="w-4 h-4" />
+                Iniciar Navegação
               </Button>
               {routeInfo.station.phone && (
                 <Button
                   variant="secondary"
-                  className="gap-2 h-10"
+                  className="gap-2 h-11"
                   onClick={() => handleCall(routeInfo.station.phone!)}
                 >
                   <Phone className="w-4 h-4" />
-                  Ligar
                 </Button>
               )}
             </div>
