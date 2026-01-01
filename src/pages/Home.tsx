@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Heart, Loader2 } from 'lucide-react';
+import { Heart, Loader2, MessageCircleHeart } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFeed } from '@/hooks/useFeed';
 import { useOnboarding } from '@/hooks/useOnboarding';
@@ -156,6 +157,15 @@ const Home: React.FC = () => {
           onPostUpdated={fetchPosts}
         />
       )}
+
+      {/* Floating Chat Button */}
+      <Button
+        onClick={() => navigate('/chat')}
+        className="fixed right-4 bottom-24 z-50 h-14 w-14 rounded-full shadow-lg"
+        size="icon"
+      >
+        <MessageCircleHeart className="h-6 w-6" />
+      </Button>
 
       {/* Report Dialog */}
       <ReportDialog
