@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Send, Shield, Clock, Trash2, MapPin } from 'lucide-react';
+import { ArrowLeft, Send, Shield, Clock, Trash2, MapPin, Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -70,30 +70,28 @@ const Chat = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col pb-20">
       {/* Header */}
-      <header className="bg-primary text-primary-foreground p-4 flex items-center gap-3 sticky top-0 z-10">
+      <header className="bg-primary text-primary-foreground px-3 py-3 flex items-center gap-3 sticky top-0 z-10">
         <Button
           variant="ghost"
           size="icon"
           onClick={() => navigate(-1)}
-          className="text-primary-foreground hover:bg-primary/80"
+          className="text-primary-foreground hover:bg-white/20 h-9 w-9"
         >
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <Avatar className="h-10 w-10 bg-primary-foreground/20">
-          <AvatarFallback className="bg-transparent text-primary-foreground font-semibold">
-            E
-          </AvatarFallback>
-        </Avatar>
-        <div className="flex-1">
-          <h1 className="font-semibold">Elas - Acolhimento</h1>
-          <p className="text-xs text-primary-foreground/80">Online • Pronta para ajudar</p>
+        <div className="h-10 w-10 rounded-full bg-white/20 flex items-center justify-center">
+          <Heart className="h-5 w-5 text-white" fill="currentColor" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <h1 className="font-semibold text-base truncate">Elas</h1>
+          <p className="text-xs text-primary-foreground/80">Acolhimento • Online</p>
         </div>
         <AlertDialog>
           <AlertDialogTrigger asChild>
             <Button
               variant="ghost"
               size="icon"
-              className="text-primary-foreground hover:bg-primary/80"
+              className="text-primary-foreground hover:bg-white/20 h-9 w-9"
             >
               <Trash2 className="h-5 w-5" />
             </Button>
