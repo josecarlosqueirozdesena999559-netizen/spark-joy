@@ -80,7 +80,11 @@ const UserPostsList: React.FC<UserPostsListProps> = ({ userId }) => {
       comments_count: commentsData?.filter(c => c.post_id === post.id).length || 0,
     }));
 
-    setPosts(transformedPosts);
+    // Sort by supports_count and keep only the most relevant (highest likes)
+    const sortedPosts = transformedPosts.sort((a, b) => b.supports_count - a.supports_count);
+    const topPost = sortedPosts.length > 0 ? [sortedPosts[0]] : [];
+
+    setPosts(topPost);
     setLoading(false);
   };
 
