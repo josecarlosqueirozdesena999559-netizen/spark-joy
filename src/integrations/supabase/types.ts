@@ -187,6 +187,7 @@ export type Database = {
           created_at: string
           deleted_at: string | null
           id: string
+          push_token: string | null
           terms_accepted_at: string | null
           updated_at: string
           username: string
@@ -196,6 +197,7 @@ export type Database = {
           created_at?: string
           deleted_at?: string | null
           id: string
+          push_token?: string | null
           terms_accepted_at?: string | null
           updated_at?: string
           username: string
@@ -205,6 +207,7 @@ export type Database = {
           created_at?: string
           deleted_at?: string | null
           id?: string
+          push_token?: string | null
           terms_accepted_at?: string | null
           updated_at?: string
           username?: string

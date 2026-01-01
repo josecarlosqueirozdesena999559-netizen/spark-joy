@@ -7,6 +7,7 @@ import { useOnboarding } from '@/hooks/useOnboarding';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useUserPenalty } from '@/hooks/useUserPenalty';
 import { useToast } from '@/hooks/use-toast';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
 import FeedHeader from '@/components/feed/FeedHeader';
 import FeedOnboarding from '@/components/feed/FeedOnboarding';
 import CreatePostForm from '@/components/feed/CreatePostForm';
@@ -26,6 +27,9 @@ const Home: React.FC = () => {
   const { showOnboarding, dismissOnboarding } = useOnboarding(userId);
   const { posts, loading, fetchPosts, toggleSupport, deletePost, hidePost } = useFeed(userId);
   const { data: penalty, isLoading: penaltyLoading } = useUserPenalty(userId);
+  
+  // Initialize push notifications - requests permission after login
+  usePushNotifications();
   
   const [editingPost, setEditingPost] = useState<{ id: string; content: string } | null>(null);
   const [reportData, setReportData] = useState<{ postId: string; userId: string; content: string } | null>(null);
