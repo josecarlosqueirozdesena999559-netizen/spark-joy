@@ -14,6 +14,7 @@ import Conteudo from "./pages/Conteudo";
 import Emergencia from "./pages/Emergencia";
 import Perfil from "./pages/Perfil";
 import Notificacoes from "./pages/Notificacoes";
+import Chat from "./pages/Chat";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -101,6 +102,14 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute>
             <Notificacoes />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/chat"
+        element={
+          <ProtectedRoute>
+            <Chat />
           </ProtectedRoute>
         }
       />
