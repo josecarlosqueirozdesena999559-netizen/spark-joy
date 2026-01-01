@@ -105,10 +105,6 @@ export const SignUpForm: React.FC<SignUpFormProps> = ({ onSuccess, onSwitchToLog
         variant: 'destructive',
       });
     } else {
-      toast({
-        title: 'Conta criada com sucesso!',
-        description: 'Verifique seu e-mail para confirmar o cadastro.',
-      });
       onSuccess();
     }
   };

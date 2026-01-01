@@ -2,7 +2,6 @@ import React from 'react';
 import { Bell, User } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useNotifications } from '@/hooks/useNotifications';
-import logoImg from '@/assets/porelas-logo.png';
 
 interface FeedHeaderProps {
   avatarIcon: string;
@@ -19,16 +18,13 @@ const FeedHeader: React.FC<FeedHeaderProps> = () => {
       style={{ backgroundColor: '#e91e63' }}
     >
       <div className="flex items-center justify-between px-4 h-14">
-        {/* Logo */}
-        <div className="flex items-center gap-2">
-          <img src={logoImg} alt="PorElas" className="h-8 w-auto" />
-          <h1 
-            className="text-xl font-bold text-white"
-            style={{ fontFamily: 'Georgia, serif' }}
-          >
-            PorElas
-          </h1>
-        </div>
+        {/* App Name Only */}
+        <h1 
+          className="text-xl font-bold text-white"
+          style={{ fontFamily: 'Georgia, serif' }}
+        >
+          PorElas
+        </h1>
         
         {/* Right Actions */}
         <div className="flex items-center gap-2">
