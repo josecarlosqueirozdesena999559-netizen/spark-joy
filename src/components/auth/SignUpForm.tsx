@@ -58,7 +58,7 @@ export const SignUpForm: React.FC<SignUpFormProps> = ({ onSuccess, onSwitchToLog
   const avatarIcon = form.watch('avatarIcon');
   const termsAccepted = form.watch('termsAccepted');
   
-  const { isAvailable, isChecking } = useUsernameCheck(username);
+  const { isAvailable, isChecking, suggestions } = useUsernameCheck(username);
   const passwordStrength = getPasswordStrength(password);
 
   const canProceedStep1 = username.length >= 3 && isAvailable && !isChecking;
@@ -184,7 +184,7 @@ export const SignUpForm: React.FC<SignUpFormProps> = ({ onSuccess, onSwitchToLog
                           {isChecking ? (
                             <Loader2 className="w-4 h-4 text-muted-foreground animate-spin" />
                           ) : isAvailable ? (
-                            <Check className="w-4 h-4 text-success" />
+                            <Check className="w-4 h-4 text-green-500" />
                           ) : (
                             <X className="w-4 h-4 text-destructive" />
                           )}
@@ -193,9 +193,27 @@ export const SignUpForm: React.FC<SignUpFormProps> = ({ onSuccess, onSwitchToLog
                     </div>
                   </FormControl>
                   {username.length >= 3 && !isChecking && (
-                    <p className={`text-xs ${isAvailable ? 'text-success' : 'text-destructive'}`}>
-                      {isAvailable ? 'Nome disponível' : 'Nome já em uso'}
+                    <p className={`text-xs ${isAvailable ? 'text-green-500' : 'text-destructive'}`}>
+                      {isAvailable ? 'Nome disponível ✓' : 'Nome já em uso'}
                     </p>
+                  )}
+                  {/* Username suggestions when taken */}
+                  {!isChecking && isAvailable === false && suggestions.length > 0 && (
+                    <div className="mt-3 space-y-2">
+                      <p className="text-xs text-muted-foreground">Sugestões disponíveis:</p>
+                      <div className="flex flex-wrap gap-2">
+                        {suggestions.map((suggestion) => (
+                          <button
+                            key={suggestion}
+                            type="button"
+                            onClick={() => field.onChange(suggestion)}
+                            className="px-3 py-1.5 text-xs font-medium rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-colors border border-primary/20"
+                          >
+                            @{suggestion}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   )}
                   <FormMessage />
                 </FormItem>
