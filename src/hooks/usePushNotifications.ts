@@ -26,20 +26,27 @@ export const usePushNotifications = () => {
     }
   }, [user?.id]);
 
-  const requestPermission = useCallback(async () => {
+  const initializePush = useCallback(async () => {
+    console.log('--- INICIANDO REGISTRO NATIVO ---');
+    
     // Only run on native platforms
     if (!Capacitor.isNativePlatform()) {
       console.log('Push notifications only available on native platforms');
       return;
     }
 
+    console.log('Running on native platform, proceeding with push registration...');
+
     try {
       // Check current permission status
       const permStatus = await PushNotifications.checkPermissions();
+      console.log('Current permission status:', permStatus.receive);
       
       if (permStatus.receive === 'prompt') {
         // Request permission
+        console.log('Requesting push notification permission...');
         const result = await PushNotifications.requestPermissions();
+        console.log('Permission request result:', result.receive);
         
         if (result.receive !== 'granted') {
           console.log('Push notification permission denied');
@@ -51,7 +58,9 @@ export const usePushNotifications = () => {
       }
 
       // Register for push notifications
+      console.log('Registering for push notifications...');
       await PushNotifications.register();
+      console.log('Push registration initiated');
     } catch (err) {
       console.error('Error requesting push notification permission:', err);
     }
@@ -93,8 +102,8 @@ export const usePushNotifications = () => {
       }
     );
 
-    // Request permission when user is logged in
-    requestPermission();
+    // Initialize push when user is logged in
+    initializePush();
 
     return () => {
       registrationListener.then(l => l.remove());
@@ -102,7 +111,7 @@ export const usePushNotifications = () => {
       pushReceivedListener.then(l => l.remove());
       pushActionListener.then(l => l.remove());
     };
-  }, [user?.id, requestPermission, savePushToken]);
+  }, [user?.id, initializePush, savePushToken]);
 
-  return { requestPermission };
+  return { initializePush };
 };
