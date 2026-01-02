@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { PermissionModal } from "@/components/permissions/PermissionModal";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 import Auth from "./pages/Auth";
 import Home from "./pages/Home";
 import Mapa from "./pages/Mapa";
@@ -25,6 +26,14 @@ const queryClient = new QueryClient();
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, loading } = useAuth();
   const [permissionsReady, setPermissionsReady] = useState(false);
+  const { requestPermission } = usePushNotifications();
+
+  // Trigger push notification registration when user is authenticated and permissions are ready
+  useEffect(() => {
+    if (user && permissionsReady) {
+      requestPermission();
+    }
+  }, [user, permissionsReady, requestPermission]);
 
   if (loading) {
     return (
