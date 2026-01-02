@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 
 interface Post {
   id: string;
@@ -24,6 +25,7 @@ export const useFeed = (currentUserId: string) => {
   const [hiddenPosts, setHiddenPosts] = useState<Set<string>>(new Set());
   const [pendingSupports, setPendingSupports] = useState<Set<string>>(new Set());
   const { toast } = useToast();
+  const channelRef = useRef<RealtimeChannel | null>(null);
 
   const fetchPosts = useCallback(async () => {
     if (!currentUserId) {
@@ -117,16 +119,38 @@ export const useFeed = (currentUserId: string) => {
     }
   }, [currentUserId, fetchPosts, initialLoadDone]);
 
-  // Real-time subscription for posts and supports
+  // Real-time subscription for posts, supports, and comments
   useEffect(() => {
     if (!currentUserId) return;
 
-    const postsChannel = supabase
-      .channel('posts-realtime')
+    // Clean up previous channel if exists
+    if (channelRef.current) {
+      supabase.removeChannel(channelRef.current);
+    }
+
+    const channel = supabase
+      .channel(`feed-realtime-${currentUserId}`)
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'posts' },
+        { event: 'INSERT', schema: 'public', table: 'posts' },
         () => {
+          console.log('New post detected, refreshing feed...');
+          fetchPosts();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'posts' },
+        () => {
+          console.log('Post updated, refreshing feed...');
+          fetchPosts();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'posts' },
+        () => {
+          console.log('Post deleted, refreshing feed...');
           fetchPosts();
         }
       )
@@ -134,6 +158,7 @@ export const useFeed = (currentUserId: string) => {
         'postgres_changes',
         { event: '*', schema: 'public', table: 'post_supports' },
         () => {
+          console.log('Support changed, refreshing feed...');
           fetchPosts();
         }
       )
@@ -141,13 +166,24 @@ export const useFeed = (currentUserId: string) => {
         'postgres_changes',
         { event: '*', schema: 'public', table: 'comments' },
         () => {
+          console.log('Comment changed, refreshing feed...');
           fetchPosts();
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('Feed realtime subscription status:', status);
+        if (status === 'SUBSCRIBED') {
+          console.log('Successfully subscribed to feed realtime updates');
+        }
+      });
+
+    channelRef.current = channel;
 
     return () => {
-      supabase.removeChannel(postsChannel);
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
     };
   }, [currentUserId, fetchPosts]);
 
