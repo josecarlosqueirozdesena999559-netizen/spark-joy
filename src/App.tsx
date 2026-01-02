@@ -26,14 +26,14 @@ const queryClient = new QueryClient();
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, loading } = useAuth();
   const [permissionsReady, setPermissionsReady] = useState(false);
-  const { requestPermission } = usePushNotifications();
+  const { initializePush } = usePushNotifications();
 
   // Trigger push notification registration when user is authenticated and permissions are ready
   useEffect(() => {
     if (user && permissionsReady) {
-      requestPermission();
+      initializePush();
     }
-  }, [user, permissionsReady, requestPermission]);
+  }, [user, permissionsReady, initializePush]);
 
   if (loading) {
     return (
