@@ -13,19 +13,39 @@ export const useGeolocation = (watchMode: boolean = false) => {
     error: null,
   });
   const watchIdRef = useRef<number | null>(null);
+  const lastPositionRef = useRef<{ lat: number; lng: number } | null>(null);
+  const initializedRef = useRef(false);
 
   const getCurrentPosition = useCallback(async () => {
-    setState(prev => ({ ...prev, loading: true, error: null }));
+    if (!initializedRef.current) {
+      setState(prev => ({ ...prev, loading: true, error: null }));
+    }
     
     if ('geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
+          const newPosition = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+            heading: position.coords.heading ?? undefined,
+          };
+          
+          // Only update if position changed significantly (>10m)
+          if (lastPositionRef.current) {
+            const latDiff = Math.abs(lastPositionRef.current.lat - newPosition.lat);
+            const lngDiff = Math.abs(lastPositionRef.current.lng - newPosition.lng);
+            if (latDiff < 0.0001 && lngDiff < 0.0001) {
+              // Position hasn't changed enough, just update loading state
+              setState(prev => ({ ...prev, loading: false }));
+              return;
+            }
+          }
+          
+          lastPositionRef.current = { lat: newPosition.lat, lng: newPosition.lng };
+          initializedRef.current = true;
+          
           setState({
-            position: {
-              lat: position.coords.latitude,
-              lng: position.coords.longitude,
-              heading: position.coords.heading ?? undefined,
-            },
+            position: newPosition,
             loading: false,
             error: null,
           });
@@ -37,7 +57,7 @@ export const useGeolocation = (watchMode: boolean = false) => {
             error: error.message || 'Erro ao obter localização',
           });
         },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 }
       );
     } else {
       setState({
@@ -62,12 +82,27 @@ export const useGeolocation = (watchMode: boolean = false) => {
 
     watchIdRef.current = navigator.geolocation.watchPosition(
       (position) => {
+        const newPosition = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+          heading: position.coords.heading ?? undefined,
+        };
+        
+        // Only update if position changed significantly (>10m) to avoid loop
+        if (lastPositionRef.current) {
+          const latDiff = Math.abs(lastPositionRef.current.lat - newPosition.lat);
+          const lngDiff = Math.abs(lastPositionRef.current.lng - newPosition.lng);
+          if (latDiff < 0.0001 && lngDiff < 0.0001) {
+            // Position hasn't changed enough
+            return;
+          }
+        }
+        
+        lastPositionRef.current = { lat: newPosition.lat, lng: newPosition.lng };
+        initializedRef.current = true;
+        
         setState({
-          position: {
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-            heading: position.coords.heading ?? undefined,
-          },
+          position: newPosition,
           loading: false,
           error: null,
         });
@@ -82,7 +117,7 @@ export const useGeolocation = (watchMode: boolean = false) => {
       { 
         enableHighAccuracy: true, 
         timeout: 10000, 
-        maximumAge: 1000 // Allow 1 second cache for smoother updates
+        maximumAge: 5000 // Allow 5 second cache for stability
       }
     );
   }, []);
