@@ -127,32 +127,41 @@ const SecurityRadar: React.FC = () => {
   const [isNavigating, setIsNavigating] = useState(false);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [showAllSteps, setShowAllSteps] = useState(false);
+  const [followUser, setFollowUser] = useState(true);
   const [viewState, setViewState] = useState({
     longitude: -46.6333,
     latitude: -23.5505,
-    zoom: 14,
+    zoom: 15,
   });
 
+  // Use watch mode for real-time tracking
   const {
     position,
     loading: geoLoading,
     error: geoError,
     refresh: refreshLocation,
-  } = useGeolocation();
+  } = useGeolocation(true);
   
   const { stations, loading: stationsLoading, error: stationsError, fetchStations } =
     usePoliceStations();
 
+  // Auto-center map on user position when following
   useEffect(() => {
-    if (position) {
+    if (position && followUser) {
       setViewState(prev => ({
         ...prev,
         longitude: position.lng,
         latitude: position.lat,
       }));
+    }
+  }, [position, followUser]);
+
+  // Fetch stations when position is available
+  useEffect(() => {
+    if (position) {
       fetchStations(position.lat, position.lng, 20);
     }
-  }, [position, fetchStations]);
+  }, [position?.lat, position?.lng, fetchStations]);
 
   // Update current step based on user position during navigation
   useEffect(() => {
@@ -334,8 +343,11 @@ const SecurityRadar: React.FC = () => {
         <Map
           ref={mapRef}
           {...viewState}
-          onMove={evt => setViewState(evt.viewState)}
-          mapStyle="mapbox://styles/mapbox/dark-v11"
+          onMove={evt => {
+            setViewState(evt.viewState);
+          }}
+          onDragStart={() => setFollowUser(false)}
+          mapStyle="mapbox://styles/mapbox/navigation-day-v1"
           mapboxAccessToken={MAPBOX_TOKEN}
           style={{ width: '100%', height: '100%' }}
         >
@@ -345,6 +357,7 @@ const SecurityRadar: React.FC = () => {
             trackUserLocation 
             showUserHeading
             positionOptions={{ enableHighAccuracy: true }}
+            onGeolocate={() => setFollowUser(true)}
           />
 
           {/* Route layer */}
@@ -362,9 +375,9 @@ const SecurityRadar: React.FC = () => {
                 id="route-line-bg"
                 type="line"
                 paint={{
-                  'line-color': '#1e1e2e',
-                  'line-width': 8,
-                  'line-opacity': 0.8,
+                  'line-color': '#ffffff',
+                  'line-width': 10,
+                  'line-opacity': 0.9,
                 }}
                 layout={{
                   'line-join': 'round',
@@ -376,7 +389,7 @@ const SecurityRadar: React.FC = () => {
                 type="line"
                 paint={{
                   'line-color': '#ec4899',
-                  'line-width': 5,
+                  'line-width': 6,
                   'line-opacity': 1,
                 }}
                 layout={{
@@ -390,9 +403,14 @@ const SecurityRadar: React.FC = () => {
           {/* User location marker */}
           <Marker longitude={position.lng} latitude={position.lat}>
             <div className="relative">
-              <div className="absolute -inset-4 bg-primary/20 rounded-full animate-ping" />
-              <div className="w-7 h-7 bg-primary rounded-full border-3 border-background shadow-lg flex items-center justify-center relative z-10">
-                <Navigation className="w-3.5 h-3.5 text-primary-foreground" />
+              <div className="absolute -inset-4 bg-primary/30 rounded-full animate-ping" />
+              <div className="w-8 h-8 bg-primary rounded-full border-3 border-white shadow-lg flex items-center justify-center relative z-10">
+                <Navigation 
+                  className="w-4 h-4 text-primary-foreground" 
+                  style={{ 
+                    transform: position.heading ? `rotate(${position.heading}deg)` : undefined 
+                  }} 
+                />
               </div>
             </div>
           </Marker>
@@ -442,6 +460,18 @@ const SecurityRadar: React.FC = () => {
               <RefreshCw className="w-3 h-3" />
             </Button>
           </div>
+        )}
+
+        {/* Re-center button - shows when not following user */}
+        {!followUser && !routeInfo && (
+          <Button
+            size="sm"
+            className="absolute bottom-24 right-4 gap-2 shadow-lg"
+            onClick={() => setFollowUser(true)}
+          >
+            <Navigation className="w-4 h-4" />
+            Centralizar
+          </Button>
         )}
       </div>
 
