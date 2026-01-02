@@ -1,19 +1,21 @@
 import React from 'react';
-import { Home, MapPin, BookOpen, Phone, Lock } from 'lucide-react';
+import { Home, MapPin, BookOpen, Phone, Lock, Bell } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { useNotifications } from '@/hooks/useNotifications';
 
 const navItems = [
   { icon: Home, label: 'Feed', path: '/' },
   { icon: MapPin, label: 'Radar', path: '/mapa' },
   { icon: Lock, label: 'Cofre', path: '/cofre' },
-  { icon: BookOpen, label: 'Conteúdo', path: '/conteudo' },
+  { icon: Bell, label: 'Alertas', path: '/notificacoes', showBadge: true },
   { icon: Phone, label: 'S.O.S', path: '/emergencia', isEmergency: true },
 ];
 
 const BottomNav: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { unreadCount } = useNotifications();
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40 bg-card/80 backdrop-blur-lg border-t border-border safe-area-inset">
@@ -38,13 +40,19 @@ const BottomNav: React.FC = () => {
               ) : (
                 <div
                   className={cn(
-                    'w-10 h-10 rounded-full flex items-center justify-center transition-colors',
+                    'relative w-10 h-10 rounded-full flex items-center justify-center transition-colors',
                     isActive 
                       ? 'bg-primary text-primary-foreground' 
                       : 'text-muted-foreground hover:bg-secondary'
                   )}
                 >
                   <Icon className="w-5 h-5" />
+                  {/* Notification Badge */}
+                  {item.showBadge && unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 min-w-[1.25rem] h-5 px-1 flex items-center justify-center text-[0.625rem] font-bold bg-primary text-primary-foreground rounded-full shadow-md">
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </span>
+                  )}
                 </div>
               )}
               <span

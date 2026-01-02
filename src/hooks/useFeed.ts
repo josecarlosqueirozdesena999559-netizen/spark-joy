@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -21,6 +21,7 @@ export const useFeed = (currentUserId: string) => {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [hiddenPosts, setHiddenPosts] = useState<Set<string>>(new Set());
+  const [pendingSupports, setPendingSupports] = useState<Set<string>>(new Set());
   const { toast } = useToast();
 
   const fetchPosts = useCallback(async () => {
@@ -111,36 +112,97 @@ export const useFeed = (currentUserId: string) => {
     }
   }, [currentUserId, fetchPosts]);
 
+  // Real-time subscription for posts and supports
+  useEffect(() => {
+    if (!currentUserId) return;
+
+    const postsChannel = supabase
+      .channel('posts-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'posts' },
+        () => {
+          fetchPosts();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'post_supports' },
+        () => {
+          fetchPosts();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'comments' },
+        () => {
+          fetchPosts();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(postsChannel);
+    };
+  }, [currentUserId, fetchPosts]);
+
   const toggleSupport = async (postId: string) => {
+    // Prevent multiple clicks while operation is pending
+    if (pendingSupports.has(postId)) return;
+    
     const post = posts.find(p => p.id === postId);
     if (!post) return;
 
-    if (post.user_has_supported) {
-      const { error } = await supabase
-        .from('post_supports')
-        .delete()
-        .eq('post_id', postId)
-        .eq('user_id', currentUserId);
+    // Mark as pending
+    setPendingSupports(prev => new Set([...prev, postId]));
 
-      if (!error) {
-        setPosts(prev => prev.map(p => 
-          p.id === postId 
-            ? { ...p, supports_count: p.supports_count - 1, user_has_supported: false }
-            : p
-        ));
-      }
-    } else {
-      const { error } = await supabase
-        .from('post_supports')
-        .insert({ post_id: postId, user_id: currentUserId });
+    // Optimistic update
+    const wasSupported = post.user_has_supported;
+    setPosts(prev => prev.map(p => 
+      p.id === postId 
+        ? { 
+            ...p, 
+            supports_count: wasSupported ? p.supports_count - 1 : p.supports_count + 1, 
+            user_has_supported: !wasSupported 
+          }
+        : p
+    ));
 
-      if (!error) {
-        setPosts(prev => prev.map(p => 
-          p.id === postId 
-            ? { ...p, supports_count: p.supports_count + 1, user_has_supported: true }
-            : p
-        ));
+    try {
+      if (wasSupported) {
+        const { error } = await supabase
+          .from('post_supports')
+          .delete()
+          .eq('post_id', postId)
+          .eq('user_id', currentUserId);
+
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('post_supports')
+          .insert({ post_id: postId, user_id: currentUserId });
+
+        if (error) throw error;
       }
+    } catch (error) {
+      // Revert optimistic update on error
+      setPosts(prev => prev.map(p => 
+        p.id === postId 
+          ? { 
+              ...p, 
+              supports_count: wasSupported ? p.supports_count + 1 : p.supports_count - 1, 
+              user_has_supported: wasSupported 
+            }
+          : p
+      ));
+      console.error('Error toggling support:', error);
+    } finally {
+      // Remove from pending
+      setPendingSupports(prev => {
+        const next = new Set(prev);
+        next.delete(postId);
+        return next;
+      });
     }
   };
 
@@ -178,5 +240,6 @@ export const useFeed = (currentUserId: string) => {
     toggleSupport,
     deletePost,
     hidePost,
+    pendingSupports,
   };
 };
