@@ -12,6 +12,8 @@ import { signUpSchema, SignUpFormData, getPasswordStrength } from '@/lib/validat
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Progress } from '@/components/ui/progress';
+import { registerPushToken } from '@/lib/pushNotifications';
+import { supabase } from '@/integrations/supabase/client';
 
 interface SignUpFormProps {
   onSuccess: () => void;
@@ -105,6 +107,24 @@ export const SignUpForm: React.FC<SignUpFormProps> = ({ onSuccess, onSwitchToLog
         variant: 'destructive',
       });
     } else {
+      // After successful signup, wait for session and register push token
+      try {
+        // Wait a moment for the session to be established
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Get the current session to get the user ID
+        const { data: sessionData } = await supabase.auth.getSession();
+        const userId = sessionData?.session?.user?.id;
+        
+        if (userId) {
+          // Register push token before redirecting
+          await registerPushToken(userId);
+        }
+      } catch (pushError) {
+        console.error('Error registering push token after signup:', pushError);
+        // Don't block the flow if push token registration fails
+      }
+      
       onSuccess();
     }
   };
