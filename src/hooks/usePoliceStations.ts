@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 
 export interface PoliceStation {
   id: number;
@@ -15,8 +15,22 @@ export const usePoliceStations = () => {
   const [stations, setStations] = useState<PoliceStation[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const hasFetchedRef = useRef(false);
+  const lastCoordsRef = useRef<{ lat: number; lng: number } | null>(null);
 
   const fetchStations = useCallback(async (lat: number, lng: number, radiusKm: number = 20) => {
+    // Prevent duplicate fetches for the same location
+    if (lastCoordsRef.current) {
+      const latDiff = Math.abs(lastCoordsRef.current.lat - lat);
+      const lngDiff = Math.abs(lastCoordsRef.current.lng - lng);
+      // Only refetch if moved more than ~500m
+      if (latDiff < 0.005 && lngDiff < 0.005 && hasFetchedRef.current) {
+        return;
+      }
+    }
+
+    hasFetchedRef.current = true;
+    lastCoordsRef.current = { lat, lng };
     setLoading(true);
     setError(null);
 
@@ -124,7 +138,12 @@ export const usePoliceStations = () => {
     setLoading(false);
   }, []);
 
-  return { stations, loading, error, fetchStations };
+  const resetFetch = useCallback(() => {
+    hasFetchedRef.current = false;
+    lastCoordsRef.current = null;
+  }, []);
+
+  return { stations, loading, error, fetchStations, resetFetch };
 };
 
 function getStationType(tags: Record<string, string>): string {

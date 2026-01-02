@@ -128,6 +128,8 @@ const SecurityRadar: React.FC = () => {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [showAllSteps, setShowAllSteps] = useState(false);
   const [followUser, setFollowUser] = useState(true);
+  const [mapInitialized, setMapInitialized] = useState(false);
+  const initialFetchDoneRef = useRef(false);
   const [viewState, setViewState] = useState({
     longitude: -46.6333,
     latitude: -23.5505,
@@ -142,26 +144,39 @@ const SecurityRadar: React.FC = () => {
     refresh: refreshLocation,
   } = useGeolocation(true);
   
-  const { stations, loading: stationsLoading, error: stationsError, fetchStations } =
+  const { stations, loading: stationsLoading, error: stationsError, fetchStations, resetFetch } =
     usePoliceStations();
 
-  // Auto-center map on user position when following
+  // Initialize map position once when we get the first position
   useEffect(() => {
-    if (position && followUser) {
+    if (position && !mapInitialized) {
+      setViewState({
+        longitude: position.lng,
+        latitude: position.lat,
+        zoom: 15,
+      });
+      setMapInitialized(true);
+    }
+  }, [position, mapInitialized]);
+
+  // Auto-center map on user position when following (only during navigation)
+  useEffect(() => {
+    if (position && followUser && isNavigating) {
       setViewState(prev => ({
         ...prev,
         longitude: position.lng,
         latitude: position.lat,
       }));
     }
-  }, [position, followUser]);
+  }, [position, followUser, isNavigating]);
 
-  // Fetch stations when position is available
+  // Fetch stations ONCE when position is available
   useEffect(() => {
-    if (position) {
+    if (position && !initialFetchDoneRef.current) {
+      initialFetchDoneRef.current = true;
       fetchStations(position.lat, position.lng, 20);
     }
-  }, [position?.lat, position?.lng, fetchStations]);
+  }, [position, fetchStations]);
 
   // Update current step based on user position during navigation
   useEffect(() => {
@@ -195,9 +210,10 @@ const SecurityRadar: React.FC = () => {
   const handleRefresh = useCallback(() => {
     refreshLocation();
     if (position) {
+      resetFetch();
       fetchStations(position.lat, position.lng, 20);
     }
-  }, [refreshLocation, position, fetchStations]);
+  }, [refreshLocation, position, fetchStations, resetFetch]);
 
   const fetchRoute = useCallback(async (station: StationWithDistance) => {
     if (!position) return;
@@ -441,13 +457,11 @@ const SecurityRadar: React.FC = () => {
           ))}
         </Map>
 
-        {/* Loading overlay */}
+        {/* Loading indicator - small and discrete */}
         {stationsLoading && (
-          <div className="absolute inset-0 bg-background/50 flex items-center justify-center">
-            <div className="bg-card p-4 rounded-lg shadow-lg flex items-center gap-3">
-              <Loader2 className="w-5 h-5 animate-spin text-primary" />
-              <span className="text-sm text-foreground">Buscando delegacias...</span>
-            </div>
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-card/90 backdrop-blur-sm px-4 py-2 rounded-full shadow-lg flex items-center gap-2">
+            <Loader2 className="w-4 h-4 animate-spin text-primary" />
+            <span className="text-xs text-foreground">Carregando...</span>
           </div>
         )}
 
