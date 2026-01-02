@@ -26,7 +26,7 @@ const Home: React.FC = () => {
   
   const { profile } = useUserProfile(userId);
   const { showOnboarding, dismissOnboarding } = useOnboarding(userId);
-  const { posts, loading, fetchPosts, toggleSupport, deletePost, hidePost } = useFeed(userId);
+  const { posts, loading, fetchPosts, toggleSupport, deletePost, hidePost, pendingSupports } = useFeed(userId);
   const { data: penalty, isLoading: penaltyLoading } = useUserPenalty(userId);
   
   // Initialize push notifications - requests permission after login
@@ -141,6 +141,7 @@ const Home: React.FC = () => {
                 onEdit={handleEdit}
                 onDelete={deletePost}
                 onReport={handleReport}
+                isPendingSupport={pendingSupports.has(post.id)}
               />
             ))}
           </div>

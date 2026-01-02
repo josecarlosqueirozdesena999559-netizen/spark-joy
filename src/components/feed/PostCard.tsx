@@ -35,6 +35,7 @@ interface PostCardProps {
   onEdit: (post: Post) => void;
   onDelete: (postId: string) => void;
   onReport: (postId: string, userId: string) => void;
+  isPendingSupport?: boolean;
 }
 
 const avatarIcons: Record<string, string> = {
@@ -55,6 +56,7 @@ const PostCard: React.FC<PostCardProps> = ({
   onEdit,
   onDelete,
   onReport,
+  isPendingSupport = false,
 }) => {
   const [showComments, setShowComments] = useState(false);
   const isOwner = post.user_id === currentUserId;
@@ -137,15 +139,16 @@ const PostCard: React.FC<PostCardProps> = ({
           <Button
             variant={post.user_has_supported ? "default" : "ghost"}
             size="sm"
+            disabled={isPendingSupport}
             className={`rounded-full gap-1.5 h-9 px-3 transition-all ${
               post.user_has_supported 
                 ? 'bg-primary/10 text-primary hover:bg-primary/20' 
                 : 'text-muted-foreground hover:text-primary hover:bg-primary/5'
-            }`}
+            } ${isPendingSupport ? 'opacity-50 cursor-not-allowed' : ''}`}
             onClick={() => onSupport(post.id)}
           >
             <Heart 
-              className="w-4 h-4" 
+              className={`w-4 h-4 ${isPendingSupport ? 'animate-pulse' : ''}`}
               fill={post.user_has_supported ? "currentColor" : "none"} 
             />
             <span className="text-sm">{post.supports_count}</span>
