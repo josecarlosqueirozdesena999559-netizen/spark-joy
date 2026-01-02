@@ -1,11 +1,12 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
-import Map, { Marker, Popup, NavigationControl, GeolocateControl, Source, Layer } from 'react-map-gl/mapbox';
+import Map, { Marker, NavigationControl, GeolocateControl, Source, Layer } from 'react-map-gl/mapbox';
 import type { MapRef } from 'react-map-gl/mapbox';
 import { Shield, Navigation, Phone, RefreshCw, Loader2, AlertTriangle, MapPin, X, Clock, Route, ChevronUp, ChevronDown, CornerUpRight, CornerUpLeft, ArrowUp, RotateCcw, Flag, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { usePoliceStations, PoliceStation } from '@/hooks/usePoliceStations';
+import StationBottomSheet from './StationBottomSheet';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
 const MAPBOX_TOKEN = 'pk.eyJ1Ijoiam9zZWNhcmxvc3FqZGZuZiIsImEiOiJjbWp2dnZzNjI1bHYyM2VwczV2eXFiZzNzIn0.tkqBfgDN54sp53HwuM6gGw';
@@ -120,6 +121,7 @@ interface RouteInfo {
 const SecurityRadar: React.FC = () => {
   const mapRef = useRef<MapRef>(null);
   const [selectedStation, setSelectedStation] = useState<StationWithDistance | null>(null);
+  const [bottomSheetOpen, setBottomSheetOpen] = useState(false);
   const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null);
   const [loadingRoute, setLoadingRoute] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
@@ -247,6 +249,7 @@ const SecurityRadar: React.FC = () => {
   }, [position]);
 
   const handleShowRoute = (station: StationWithDistance) => {
+    setBottomSheetOpen(false);
     setSelectedStation(null);
     fetchRoute(station);
   };
@@ -403,8 +406,9 @@ const SecurityRadar: React.FC = () => {
               anchor="bottom"
               onClick={e => {
                 e.originalEvent.stopPropagation();
-                if (!isNavigating) {
+                if (!isNavigating && !routeInfo) {
                   setSelectedStation(station);
+                  setBottomSheetOpen(true);
                 }
               }}
             >
@@ -417,59 +421,6 @@ const SecurityRadar: React.FC = () => {
               </div>
             </Marker>
           ))}
-
-          {/* Popup for selected station */}
-          {selectedStation && !routeInfo && (
-            <Popup
-              longitude={selectedStation.lng}
-              latitude={selectedStation.lat}
-              anchor="bottom"
-              onClose={() => setSelectedStation(null)}
-              closeButton={true}
-              closeOnClick={false}
-              className="station-popup"
-              offset={25}
-            >
-              <div className="p-2 min-w-[220px]">
-                <h3 className="font-semibold text-foreground text-sm">{selectedStation.name}</h3>
-                <p className="text-xs text-muted-foreground mt-0.5">{selectedStation.type}</p>
-                <p className="text-xs text-primary font-medium mt-1">
-                  {formatDistance(selectedStation.distance)} de distância
-                </p>
-                {selectedStation.phone && (
-                  <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-                    <Phone className="w-3 h-3" />
-                    {selectedStation.phone}
-                  </p>
-                )}
-                <div className="flex gap-2 mt-3">
-                  <Button
-                    size="sm"
-                    className="flex-1 gap-1 h-9 text-xs"
-                    onClick={() => handleShowRoute(selectedStation)}
-                    disabled={loadingRoute}
-                  >
-                    {loadingRoute ? (
-                      <Loader2 className="w-3 h-3 animate-spin" />
-                    ) : (
-                      <Route className="w-3 h-3" />
-                    )}
-                    Ver Rota
-                  </Button>
-                  {selectedStation.phone && (
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      className="gap-1 h-9 text-xs"
-                      onClick={() => handleCall(selectedStation.phone!)}
-                    >
-                      <Phone className="w-3 h-3" />
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </Popup>
-          )}
         </Map>
 
         {/* Loading overlay */}
@@ -690,6 +641,18 @@ const SecurityRadar: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Station details bottom sheet */}
+      <StationBottomSheet
+        station={selectedStation}
+        open={bottomSheetOpen}
+        onOpenChange={(open) => {
+          setBottomSheetOpen(open);
+          if (!open) setSelectedStation(null);
+        }}
+        onShowRoute={handleShowRoute}
+        loadingRoute={loadingRoute}
+      />
     </div>
   );
 };

@@ -6,6 +6,8 @@ export interface PoliceStation {
   lat: number;
   lng: number;
   phone?: string;
+  email?: string;
+  address?: string;
   type: string;
 }
 
@@ -79,12 +81,29 @@ export const usePoliceStations = () => {
             const elLng = el.lon ?? el.center?.lon;
             const tags = el.tags || {};
             
+            // Build full address from available tags
+            const addressParts = [
+              tags['addr:street'] && tags['addr:housenumber'] 
+                ? `${tags['addr:street']}, ${tags['addr:housenumber']}`
+                : tags['addr:street'],
+              tags['addr:suburb'] || tags['addr:neighbourhood'],
+              tags['addr:city'],
+              tags['addr:state'],
+              tags['addr:postcode'] && `CEP: ${tags['addr:postcode']}`,
+            ].filter(Boolean);
+            
+            const address = addressParts.length > 0 
+              ? addressParts.join(', ')
+              : tags['addr:full'] || undefined;
+            
             return {
               id: el.id,
               name: tags.name || tags['name:pt'] || getStationType(tags),
               lat: elLat,
               lng: elLng,
               phone: tags.phone || tags['contact:phone'],
+              email: tags.email || tags['contact:email'],
+              address: address,
               type: getStationType(tags),
             };
           });
