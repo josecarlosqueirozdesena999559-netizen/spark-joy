@@ -19,15 +19,17 @@ interface Post {
 
 export const useFeed = (currentUserId: string) => {
   const [posts, setPosts] = useState<Post[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [initialLoadDone, setInitialLoadDone] = useState(false);
   const [hiddenPosts, setHiddenPosts] = useState<Set<string>>(new Set());
   const [pendingSupports, setPendingSupports] = useState<Set<string>>(new Set());
   const { toast } = useToast();
 
   const fetchPosts = useCallback(async () => {
-    if (!currentUserId) return;
-    
-    setLoading(true);
+    if (!currentUserId) {
+      setLoading(false);
+      return;
+    }
     
     // Fetch posts with profiles (profiles RLS already filters deleted_at IS NULL)
     const { data: postsData, error: postsError } = await supabase
@@ -107,10 +109,13 @@ export const useFeed = (currentUserId: string) => {
   }, [currentUserId]);
 
   useEffect(() => {
-    if (currentUserId) {
-      fetchPosts();
+    if (currentUserId && !initialLoadDone) {
+      setLoading(true);
+      fetchPosts().finally(() => {
+        setInitialLoadDone(true);
+      });
     }
-  }, [currentUserId, fetchPosts]);
+  }, [currentUserId, fetchPosts, initialLoadDone]);
 
   // Real-time subscription for posts and supports
   useEffect(() => {
