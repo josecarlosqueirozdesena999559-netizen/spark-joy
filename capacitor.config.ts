@@ -10,7 +10,9 @@ const config: CapacitorConfig = {
   },
   plugins: {
     PushNotifications: {
-      presentationOptions: ["badge", "sound", "alert"]
+      presentationOptions: ["badge", "sound", "alert"],
+      iconColor: "#E91E63",
+      androidIcon: "ic_stat_notification"
     },
     Geolocation: {
       // Enable high accuracy GPS
