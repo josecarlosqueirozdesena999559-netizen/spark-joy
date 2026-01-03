@@ -176,7 +176,8 @@ const SecurityRadar: React.FC = () => {
       initialFetchDoneRef.current = true;
       fetchStations(position.lat, position.lng, 20);
     }
-  }, [position, fetchStations]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [position?.lat, position?.lng]);
 
   // Update current step based on user position during navigation
   useEffect(() => {
