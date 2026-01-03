@@ -23,12 +23,15 @@ import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient();
 
 // Protected Route component
+// Component to handle push notifications initialization
+const PushNotificationsHandler = () => {
+  usePushNotifications();
+  return null;
+};
+
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, loading } = useAuth();
   const [permissionsReady, setPermissionsReady] = useState(false);
-  
-  // Push notifications are automatically registered via usePushNotifications hook
-  usePushNotifications();
 
   if (loading) {
     return (
@@ -44,6 +47,7 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 
   return (
     <>
+      <PushNotificationsHandler />
       <PermissionModal onPermissionGranted={() => setPermissionsReady(true)} />
       {permissionsReady && children}
     </>
