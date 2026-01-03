@@ -1,117 +1,37 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useRef } from 'react';
 import { Capacitor } from '@capacitor/core';
-import { PushNotifications } from '@capacitor/push-notifications';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { registerPushToken, cleanupPushNotifications } from '@/lib/pushNotifications';
 
+/**
+ * Hook to manage push notifications lifecycle.
+ * Automatically registers for push when user is authenticated on native platforms.
+ * Cleans up listeners on logout.
+ */
 export const usePushNotifications = () => {
   const { user } = useAuth();
+  const hasRegistered = useRef(false);
 
-  const savePushToken = useCallback(async (token: string) => {
-    if (!user?.id) return;
-
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ push_token: token })
-        .eq('id', user.id);
-
-      if (error) {
-        console.error('Error saving push token:', error);
-      } else {
-        console.log('Push token saved successfully');
-      }
-    } catch (err) {
-      console.error('Error saving push token:', err);
-    }
-  }, [user?.id]);
-
-  const initializePush = useCallback(async () => {
-    console.log('--- INICIANDO REGISTRO NATIVO ---');
-    
+  useEffect(() => {
     // Only run on native platforms
     if (!Capacitor.isNativePlatform()) {
-      console.log('Push notifications only available on native platforms');
       return;
     }
 
-    console.log('Running on native platform, proceeding with push registration...');
-
-    try {
-      // Check current permission status
-      const permStatus = await PushNotifications.checkPermissions();
-      console.log('Current permission status:', permStatus.receive);
-      
-      if (permStatus.receive === 'prompt') {
-        // Request permission
-        console.log('Requesting push notification permission...');
-        const result = await PushNotifications.requestPermissions();
-        console.log('Permission request result:', result.receive);
-        
-        if (result.receive !== 'granted') {
-          console.log('Push notification permission denied');
-          return;
-        }
-      } else if (permStatus.receive !== 'granted') {
-        console.log('Push notification permission not granted');
-        return;
-      }
-
-      // Register for push notifications
-      console.log('Registering for push notifications...');
-      await PushNotifications.register();
-      console.log('Push registration initiated');
-    } catch (err) {
-      console.error('Error requesting push notification permission:', err);
+    // Register when user is authenticated and hasn't registered yet
+    if (user?.id && !hasRegistered.current) {
+      console.log('User authenticated, registering push notifications...');
+      hasRegistered.current = true;
+      registerPushToken();
     }
-  }, []);
 
-  useEffect(() => {
-    if (!Capacitor.isNativePlatform() || !user?.id) return;
+    // Cleanup when user logs out
+    if (!user && hasRegistered.current) {
+      console.log('User logged out, cleaning up push notifications...');
+      hasRegistered.current = false;
+      cleanupPushNotifications();
+    }
+  }, [user?.id]);
 
-    // Listen for registration success
-    const registrationListener = PushNotifications.addListener(
-      'registration',
-      (token) => {
-        console.log('Push registration success, token:', token.value);
-        savePushToken(token.value);
-      }
-    );
-
-    // Listen for registration errors
-    const registrationErrorListener = PushNotifications.addListener(
-      'registrationError',
-      (error) => {
-        console.error('Push registration error:', error);
-      }
-    );
-
-    // Listen for push notifications received
-    const pushReceivedListener = PushNotifications.addListener(
-      'pushNotificationReceived',
-      (notification) => {
-        console.log('Push notification received:', notification);
-      }
-    );
-
-    // Listen for push notification action performed
-    const pushActionListener = PushNotifications.addListener(
-      'pushNotificationActionPerformed',
-      (notification) => {
-        console.log('Push notification action performed:', notification);
-      }
-    );
-
-    // Initialize push when user is logged in
-    initializePush();
-
-    return () => {
-      registrationListener.then(l => l.remove());
-      registrationErrorListener.then(l => l.remove());
-      pushReceivedListener.then(l => l.remove());
-      pushActionListener.then(l => l.remove());
-    };
-  }, [user?.id, initializePush, savePushToken]);
-
-  return { initializePush };
+  return { registerPushToken };
 };
