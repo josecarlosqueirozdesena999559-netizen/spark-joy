@@ -2,72 +2,122 @@ import { Capacitor } from '@capacitor/core';
 import { PushNotifications } from '@capacitor/push-notifications';
 import { supabase } from '@/integrations/supabase/client';
 
+let listenersRegistered = false;
+
 /**
- * Registers push notifications and saves the token for a specific user.
- * This function can be called imperatively after signup.
+ * Registers push notifications and saves the FCM token to push_tokens table.
+ * Only works on native platforms (Android/iOS).
+ * Must be called after user authentication.
  */
-export const registerPushToken = async (userId: string): Promise<void> => {
-  // Only run on native platforms
+export const registerPushToken = async (): Promise<void> => {
   if (!Capacitor.isNativePlatform()) {
     console.log('Push notifications only available on native platforms');
     return;
   }
 
   try {
-    // Check current permission status
-    const permStatus = await PushNotifications.checkPermissions();
-    
-    if (permStatus.receive === 'prompt') {
-      // Request permission
-      const result = await PushNotifications.requestPermissions();
-      
-      if (result.receive !== 'granted') {
-        console.log('Push notification permission denied');
-        return;
-      }
-    } else if (permStatus.receive !== 'granted') {
-      console.log('Push notification permission not granted');
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      console.log('No authenticated user, skipping push registration');
       return;
     }
 
-    // Create a promise that resolves when we get the token
-    const tokenPromise = new Promise<string>((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        reject(new Error('Push token registration timeout'));
-      }, 10000); // 10 second timeout
+    const permStatus = await PushNotifications.checkPermissions();
 
-      PushNotifications.addListener('registration', (token) => {
-        clearTimeout(timeout);
-        console.log('Push registration success, token:', token.value);
-        resolve(token.value);
+    if (permStatus.receive !== 'granted') {
+      const request = await PushNotifications.requestPermissions();
+      if (request.receive !== 'granted') {
+        console.log('Push permission denied');
+        return;
+      }
+    }
+
+    if (!listenersRegistered) {
+      PushNotifications.addListener('registration', async (token) => {
+        console.log('FCM token received:', token.value);
+
+        const platform = Capacitor.getPlatform(); // 'android' or 'ios'
+
+        const { error } = await supabase
+          .from('push_tokens')
+          .upsert(
+            {
+              user_id: user.id,
+              token: token.value,
+              platform: platform
+            },
+            { onConflict: 'token' }
+          );
+
+        if (error) {
+          console.error('Error saving push token:', error);
+        } else {
+          console.log('Push token saved successfully');
+        }
       });
 
-      PushNotifications.addListener('registrationError', (error) => {
-        clearTimeout(timeout);
-        console.error('Push registration error:', error);
-        reject(error);
+      PushNotifications.addListener('registrationError', (err) => {
+        console.error('Push registration error:', err);
       });
-    });
 
-    // Register for push notifications
+      PushNotifications.addListener('pushNotificationReceived', (notification) => {
+        console.log('Push notification received:', notification);
+      });
+
+      PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
+        console.log('Push notification action performed:', notification);
+      });
+
+      listenersRegistered = true;
+    }
+
     await PushNotifications.register();
 
-    // Wait for the token
-    const token = await tokenPromise;
+  } catch (error) {
+    console.error('Failed to register push notifications:', error);
+  }
+};
 
-    // Save the token to the user's profile using upsert pattern
-    const { error } = await supabase
-      .from('profiles')
-      .update({ push_token: token })
-      .eq('id', userId);
+/**
+ * Removes all push notification listeners and resets registration state.
+ * Call this on logout.
+ */
+export const cleanupPushNotifications = async (): Promise<void> => {
+  if (!Capacitor.isNativePlatform()) return;
+  
+  try {
+    await PushNotifications.removeAllListeners();
+    listenersRegistered = false;
+    console.log('Push notification listeners cleaned up');
+  } catch (error) {
+    console.error('Error cleaning up push notifications:', error);
+  }
+};
 
-    if (error) {
-      console.error('Error saving push token:', error);
-    } else {
-      console.log('Push token saved successfully for user:', userId);
+/**
+ * Removes the current user's push token from the database.
+ * Call this on logout to stop receiving notifications on this device.
+ */
+export const removePushToken = async (): Promise<void> => {
+  if (!Capacitor.isNativePlatform()) return;
+
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (user) {
+      const { error } = await supabase
+        .from('push_tokens')
+        .delete()
+        .eq('user_id', user.id);
+
+      if (error) {
+        console.error('Error removing push token:', error);
+      } else {
+        console.log('Push token removed successfully');
+      }
     }
-  } catch (err) {
-    console.error('Error registering push token:', err);
-    // Don't throw - we don't want to block the signup flow
+  } catch (error) {
+    console.error('Error removing push token:', error);
   }
 };

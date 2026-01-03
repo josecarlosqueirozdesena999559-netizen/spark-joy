@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -26,14 +26,9 @@ const queryClient = new QueryClient();
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, loading } = useAuth();
   const [permissionsReady, setPermissionsReady] = useState(false);
-  const { initializePush } = usePushNotifications();
-
-  // Trigger push notification registration when user is authenticated and permissions are ready
-  useEffect(() => {
-    if (user && permissionsReady) {
-      initializePush();
-    }
-  }, [user, permissionsReady, initializePush]);
+  
+  // Push notifications are automatically registered via usePushNotifications hook
+  usePushNotifications();
 
   if (loading) {
     return (
