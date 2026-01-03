@@ -33,44 +33,48 @@ export const registerPushToken = async (): Promise<void> => {
       }
     }
 
-    if (!listenersRegistered) {
-      PushNotifications.addListener('registration', async (token) => {
-        console.log('FCM token received:', token.value);
-
-        const platform = Capacitor.getPlatform(); // 'android' or 'ios'
-
-        const { error } = await supabase
-          .from('push_tokens')
-          .upsert(
-            {
-              user_id: user.id,
-              token: token.value,
-              platform: platform
-            },
-            { onConflict: 'token' }
-          );
-
-        if (error) {
-          console.error('Error saving push token:', error);
-        } else {
-          console.log('Push token saved successfully');
-        }
-      });
-
-      PushNotifications.addListener('registrationError', (err) => {
-        console.error('Push registration error:', err);
-      });
-
-      PushNotifications.addListener('pushNotificationReceived', (notification) => {
-        console.log('Push notification received:', notification);
-      });
-
-      PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
-        console.log('Push notification action performed:', notification);
-      });
-
-      listenersRegistered = true;
+    // Always remove old listeners before adding new ones
+    if (listenersRegistered) {
+      await PushNotifications.removeAllListeners();
+      listenersRegistered = false;
     }
+
+    PushNotifications.addListener('registration', async (token) => {
+      console.log('🔥 TOKEN FCM:', token.value);
+
+      const platform = Capacitor.getPlatform();
+
+      const { error } = await supabase
+        .from('push_tokens')
+        .upsert(
+          {
+            user_id: user.id,
+            token: token.value,
+            platform: platform
+          },
+          { onConflict: 'token' }
+        );
+
+      if (error) {
+        console.error('❌ Error saving push token:', error);
+      } else {
+        console.log('✅ Push token saved successfully');
+      }
+    });
+
+    PushNotifications.addListener('registrationError', (err) => {
+      console.error('❌ Erro ao registrar push:', err);
+    });
+
+    PushNotifications.addListener('pushNotificationReceived', (notification) => {
+      console.log('📩 Push recebido:', notification);
+    });
+
+    PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
+      console.log('👉 Push clicado:', notification);
+    });
+
+    listenersRegistered = true;
 
     await PushNotifications.register();
 
