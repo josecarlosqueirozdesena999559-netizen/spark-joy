@@ -203,15 +203,14 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Get user's push token
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("push_token")
-      .eq("id", userId)
-      .single();
+    // Get user's push tokens from push_tokens table
+    const { data: pushTokens, error: tokenError } = await supabase
+      .from("push_tokens")
+      .select("token")
+      .eq("user_id", userId);
 
-    if (profileError || !profile?.push_token) {
-      console.log("No push token found for user:", userId);
+    if (tokenError || !pushTokens || pushTokens.length === 0) {
+      console.log("No push tokens found for user:", userId);
       return new Response(
         JSON.stringify({ success: false, reason: "No push token" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -221,18 +220,22 @@ serve(async (req) => {
     // Get access token for FCM
     const accessToken = await getAccessToken(serviceAccount);
 
-    // Send notification
-    const success = await sendFCMNotification(
-      accessToken,
-      serviceAccount.project_id,
-      profile.push_token,
-      title,
-      body,
-      data
-    );
+    // Send notification to all user's devices
+    let successCount = 0;
+    for (const pushToken of pushTokens) {
+      const success = await sendFCMNotification(
+        accessToken,
+        serviceAccount.project_id,
+        pushToken.token,
+        title,
+        body,
+        data
+      );
+      if (success) successCount++;
+    }
 
     return new Response(
-      JSON.stringify({ success }),
+      JSON.stringify({ success: successCount > 0, devicesNotified: successCount }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {

@@ -15,8 +15,11 @@ export const useGeolocation = (watchMode: boolean = false) => {
   const watchIdRef = useRef<number | null>(null);
   const lastPositionRef = useRef<{ lat: number; lng: number } | null>(null);
   const initializedRef = useRef(false);
+  const mountedRef = useRef(true);
 
-  const getCurrentPosition = useCallback(async () => {
+  const getCurrentPosition = useCallback(() => {
+    if (!mountedRef.current) return;
+    
     if (!initializedRef.current) {
       setState(prev => ({ ...prev, loading: true, error: null }));
     }
@@ -24,6 +27,8 @@ export const useGeolocation = (watchMode: boolean = false) => {
     if ('geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
+          if (!mountedRef.current) return;
+          
           const newPosition = {
             lat: position.coords.latitude,
             lng: position.coords.longitude,
@@ -35,7 +40,6 @@ export const useGeolocation = (watchMode: boolean = false) => {
             const latDiff = Math.abs(lastPositionRef.current.lat - newPosition.lat);
             const lngDiff = Math.abs(lastPositionRef.current.lng - newPosition.lng);
             if (latDiff < 0.0001 && lngDiff < 0.0001) {
-              // Position hasn't changed enough, just update loading state
               setState(prev => ({ ...prev, loading: false }));
               return;
             }
@@ -51,6 +55,7 @@ export const useGeolocation = (watchMode: boolean = false) => {
           });
         },
         (error) => {
+          if (!mountedRef.current) return;
           setState({
             position: null,
             loading: false,
@@ -68,7 +73,7 @@ export const useGeolocation = (watchMode: boolean = false) => {
     }
   }, []);
 
-  // Start watching position for real-time tracking
+  // Start watching position - no deps to prevent recreation
   const startWatching = useCallback(() => {
     if (!('geolocation' in navigator)) {
       setState(prev => ({ ...prev, error: 'Geolocalização não suportada' }));
@@ -78,22 +83,24 @@ export const useGeolocation = (watchMode: boolean = false) => {
     // Clear any existing watch
     if (watchIdRef.current !== null) {
       navigator.geolocation.clearWatch(watchIdRef.current);
+      watchIdRef.current = null;
     }
 
     watchIdRef.current = navigator.geolocation.watchPosition(
       (position) => {
+        if (!mountedRef.current) return;
+        
         const newPosition = {
           lat: position.coords.latitude,
           lng: position.coords.longitude,
           heading: position.coords.heading ?? undefined,
         };
         
-        // Only update if position changed significantly (>10m) to avoid loop
+        // Only update if position changed significantly (>10m)
         if (lastPositionRef.current) {
           const latDiff = Math.abs(lastPositionRef.current.lat - newPosition.lat);
           const lngDiff = Math.abs(lastPositionRef.current.lng - newPosition.lng);
           if (latDiff < 0.0001 && lngDiff < 0.0001) {
-            // Position hasn't changed enough
             return;
           }
         }
@@ -108,6 +115,7 @@ export const useGeolocation = (watchMode: boolean = false) => {
         });
       },
       (error) => {
+        if (!mountedRef.current) return;
         setState(prev => ({
           ...prev,
           loading: false,
@@ -117,7 +125,7 @@ export const useGeolocation = (watchMode: boolean = false) => {
       { 
         enableHighAccuracy: true, 
         timeout: 10000, 
-        maximumAge: 5000 // Allow 5 second cache for stability
+        maximumAge: 5000
       }
     );
   }, []);
@@ -129,19 +137,24 @@ export const useGeolocation = (watchMode: boolean = false) => {
     }
   }, []);
 
+  // Run only once on mount
   useEffect(() => {
+    mountedRef.current = true;
+    
+    getCurrentPosition();
     if (watchMode) {
-      // Get initial position then start watching
-      getCurrentPosition();
       startWatching();
-    } else {
-      getCurrentPosition();
     }
 
     return () => {
-      stopWatching();
+      mountedRef.current = false;
+      if (watchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+        watchIdRef.current = null;
+      }
     };
-  }, [watchMode, getCurrentPosition, startWatching, stopWatching]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty deps - run once on mount
 
   return { 
     ...state, 
