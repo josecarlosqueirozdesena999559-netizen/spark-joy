@@ -18,9 +18,7 @@ const config: CapacitorConfig = {
       // Enable high accuracy GPS
     },
     SplashScreen: {
-      launchShowDuration: 2500,
-      launchAutoHide: true,
-      launchFadeOutDuration: 500,
+      launchAutoHide: false,
       backgroundColor: '#E91E63',
       androidSplashResourceName: 'splash',
       androidScaleType: 'CENTER_CROP',
