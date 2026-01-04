@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Eye, EyeOff, Check, X, Loader2, ArrowLeft, ArrowRight, User, Mail, Lock, Sparkles } from 'lucide-react';
+import { Eye, EyeOff, Check, X, Loader2, ArrowLeft, ArrowRight, User, Mail, Lock, Sparkles, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -12,6 +12,7 @@ import { signUpSchema, SignUpFormData, getPasswordStrength } from '@/lib/validat
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Progress } from '@/components/ui/progress';
+import { cn } from '@/lib/utils';
 
 interface SignUpFormProps {
   onSuccess: () => void;
@@ -31,6 +32,7 @@ const AVATAR_LABELS: Record<string, string> = {
 
 export const SignUpForm: React.FC<SignUpFormProps> = ({ onSuccess, onSwitchToLogin }) => {
   const [step, setStep] = useState<Step>(1);
+  const [direction, setDirection] = useState<'forward' | 'backward'>('forward');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -67,11 +69,17 @@ export const SignUpForm: React.FC<SignUpFormProps> = ({ onSuccess, onSwitchToLog
   const canSubmit = termsAccepted && canProceedStep1 && canProceedStep2 && canProceedStep3;
 
   const nextStep = () => {
-    if (step < 4) setStep((s) => (s + 1) as Step);
+    if (step < 4) {
+      setDirection('forward');
+      setStep((s) => (s + 1) as Step);
+    }
   };
 
   const prevStep = () => {
-    if (step > 1) setStep((s) => (s - 1) as Step);
+    if (step > 1) {
+      setDirection('backward');
+      setStep((s) => (s - 1) as Step);
+    }
   };
 
   const onSubmit = async (data: SignUpFormData) => {
@@ -114,7 +122,20 @@ export const SignUpForm: React.FC<SignUpFormProps> = ({ onSuccess, onSwitchToLog
 
   const progress = (step / 4) * 100;
 
-  // Registration Animation Screen
+  // Step icons for visual indicator
+  const stepIcons = [
+    { icon: User, label: 'Identidade' },
+    { icon: Mail, label: 'E-mail' },
+    { icon: Lock, label: 'Senha' },
+    { icon: Shield, label: 'Revisão' },
+  ];
+
+  // Animation classes based on direction
+  const getAnimationClass = () => {
+    return direction === 'forward' 
+      ? 'animate-slide-in-right' 
+      : 'animate-slide-in-left';
+  };
   if (isRegistering) {
     return (
       <div className="flex flex-col items-center justify-center py-12 space-y-6 animate-fade-in">
@@ -145,23 +166,56 @@ export const SignUpForm: React.FC<SignUpFormProps> = ({ onSuccess, onSwitchToLog
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
-        {/* Progress Bar */}
-        <div className="space-y-2">
-          <div className="flex justify-between text-xs text-muted-foreground">
-            <span>Etapa {step} de 4</span>
-            <span>{Math.round(progress)}%</span>
-          </div>
-          <Progress value={progress} className="h-2" />
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        {/* Step indicators */}
+        <div className="flex justify-center gap-3 mb-6">
+          {stepIcons.map((s, index) => {
+            const Icon = s.icon;
+            const isActive = step === index + 1;
+            const isCompleted = step > index + 1;
+            return (
+              <div key={index} className="flex flex-col items-center gap-1">
+                <div 
+                  className={cn(
+                    "w-10 h-10 rounded-full flex items-center justify-center transition-all duration-500 ease-out",
+                    isActive && "bg-primary text-primary-foreground scale-110 shadow-lg shadow-primary/30",
+                    isCompleted && "bg-primary/20 text-primary",
+                    !isActive && !isCompleted && "bg-muted text-muted-foreground"
+                  )}
+                >
+                  {isCompleted ? (
+                    <Check className="w-5 h-5" />
+                  ) : (
+                    <Icon className="w-5 h-5" />
+                  )}
+                </div>
+                <span className={cn(
+                  "text-[10px] font-medium transition-colors duration-300",
+                  isActive ? "text-primary" : "text-muted-foreground"
+                )}>
+                  {s.label}
+                </span>
+              </div>
+            );
+          })}
         </div>
 
+        {/* Progress Bar */}
+        <div className="space-y-2">
+          <Progress value={progress} className="h-1.5" />
+        </div>
+
+        {/* Step content with animations */}
+        <div className="relative overflow-hidden min-h-[320px]">
         {/* Step 1: Username & Avatar */}
         {step === 1 && (
-          <div className="space-y-5 animate-fade-in">
-            <div className="text-center mb-4">
-              <User className="w-8 h-8 text-primary mx-auto mb-2" />
-              <h3 className="font-semibold text-foreground">Identidade</h3>
-              <p className="text-xs text-muted-foreground">Escolha seu nome e avatar</p>
+          <div className={cn("space-y-5", getAnimationClass())} key="step-1">
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+                <User className="w-8 h-8 text-primary" />
+              </div>
+              <h3 className="text-xl font-bold text-foreground">Sua Identidade</h3>
+              <p className="text-sm text-muted-foreground mt-1">Escolha seu nome e avatar</p>
             </div>
 
             <FormField
@@ -236,11 +290,13 @@ export const SignUpForm: React.FC<SignUpFormProps> = ({ onSuccess, onSwitchToLog
 
         {/* Step 2: Email */}
         {step === 2 && (
-          <div className="space-y-5 animate-fade-in">
-            <div className="text-center mb-4">
-              <Mail className="w-8 h-8 text-primary mx-auto mb-2" />
-              <h3 className="font-semibold text-foreground">E-mail</h3>
-              <p className="text-xs text-muted-foreground">Para recuperação de conta</p>
+          <div className={cn("space-y-5", getAnimationClass())} key="step-2">
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+                <Mail className="w-8 h-8 text-primary" />
+              </div>
+              <h3 className="text-xl font-bold text-foreground">Seu E-mail</h3>
+              <p className="text-sm text-muted-foreground mt-1">Para recuperação de conta</p>
             </div>
 
             <FormField
@@ -267,11 +323,13 @@ export const SignUpForm: React.FC<SignUpFormProps> = ({ onSuccess, onSwitchToLog
 
         {/* Step 3: Password */}
         {step === 3 && (
-          <div className="space-y-5 animate-fade-in">
-            <div className="text-center mb-4">
-              <Lock className="w-8 h-8 text-primary mx-auto mb-2" />
-              <h3 className="font-semibold text-foreground">Senha</h3>
-              <p className="text-xs text-muted-foreground">Crie uma senha segura</p>
+          <div className={cn("space-y-5", getAnimationClass())} key="step-3">
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+                <Lock className="w-8 h-8 text-primary" />
+              </div>
+              <h3 className="text-xl font-bold text-foreground">Sua Senha</h3>
+              <p className="text-sm text-muted-foreground mt-1">Crie uma senha segura</p>
             </div>
 
             <FormField
@@ -353,11 +411,13 @@ export const SignUpForm: React.FC<SignUpFormProps> = ({ onSuccess, onSwitchToLog
 
         {/* Step 4: Review & Terms */}
         {step === 4 && (
-          <div className="space-y-5 animate-fade-in">
-            <div className="text-center mb-4">
-              <Check className="w-8 h-8 text-primary mx-auto mb-2" />
-              <h3 className="font-semibold text-foreground">Revisão</h3>
-              <p className="text-xs text-muted-foreground">Confirme seus dados</p>
+          <div className={cn("space-y-5", getAnimationClass())} key="step-4">
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+                <Shield className="w-8 h-8 text-primary" />
+              </div>
+              <h3 className="text-xl font-bold text-foreground">Revisão Final</h3>
+              <p className="text-sm text-muted-foreground mt-1">Confirme seus dados</p>
             </div>
 
             {/* Data Preview */}
@@ -400,6 +460,7 @@ export const SignUpForm: React.FC<SignUpFormProps> = ({ onSuccess, onSwitchToLog
             />
           </div>
         )}
+        </div>
 
         {/* Navigation Buttons */}
         <div className="flex gap-3">
