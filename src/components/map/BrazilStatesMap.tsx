@@ -29,19 +29,21 @@ const REGION_COLORS = {
   sul: '#E1BEE7',        // Light Purple
 };
 
-// Heat colors based on user density (from cold to hot)
+// Heat colors based on user density (from white to dark pink)
 const HEAT_COLORS = [
-  '#E8F5E9', // Very cold - almost no users
-  '#C8E6C9', // Cold
-  '#A5D6A7', // Cool
-  '#81C784', // Mild
-  '#66BB6A', // Warm
-  '#FFA726', // Warmer
-  '#FF7043', // Hot
-  '#F44336', // Very Hot
-  '#D32F2F', // Intense
-  '#B71C1C', // Maximum heat
+  '#FAFAFA', // No users - almost white
+  '#FFF0F3', // Very few users - lightest pink
+  '#FCE4EC', // Few users - very light pink
+  '#F8BBD9', // Some users - light pink
+  '#F48FB1', // Moderate users - medium light pink
+  '#EC407A', // Many users - medium pink
+  '#D81B60', // High users - dark pink
+  '#AD1457', // Very high users - darker pink
+  '#880E4F', // Maximum users (300+) - darkest pink
 ];
+
+// Maximum users threshold for darkest color
+const MAX_USERS_THRESHOLD = 300;
 
 // SVG paths for Brazilian states (simplified)
 const BRAZIL_STATES: StateData[] = [
@@ -175,7 +177,9 @@ const BrazilStatesMap: React.FC = () => {
 
   const getHeatColor = (count: number): string => {
     if (count === 0) return HEAT_COLORS[0];
-    const intensity = Math.min(Math.floor((count / maxCount) * 9), 9);
+    // Use 300 as the threshold for maximum intensity
+    const normalizedCount = Math.min(count, MAX_USERS_THRESHOLD);
+    const intensity = Math.min(Math.floor((normalizedCount / MAX_USERS_THRESHOLD) * 8) + 1, 8);
     return HEAT_COLORS[intensity];
   };
 
