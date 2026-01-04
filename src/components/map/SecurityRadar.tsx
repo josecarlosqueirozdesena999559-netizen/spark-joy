@@ -131,10 +131,16 @@ const SecurityRadar: React.FC = () => {
   const [mapInitialized, setMapInitialized] = useState(false);
   const initialFetchDoneRef = useRef(false);
   const [viewState, setViewState] = useState({
-    longitude: -46.6333,
-    latitude: -23.5505,
-    zoom: 15,
+    longitude: -47.9292,
+    latitude: -15.7801,
+    zoom: 4,
   });
+
+  // Brazil bounds to limit map view
+  const BRAZIL_BOUNDS: [[number, number], [number, number]] = [
+    [-73.9872, -33.7683], // Southwest
+    [-34.7299, 5.2718],   // Northeast
+  ];
 
   // Use watch mode for real-time tracking
   const {
@@ -367,6 +373,8 @@ const SecurityRadar: React.FC = () => {
           mapStyle="mapbox://styles/mapbox/navigation-day-v1"
           mapboxAccessToken={MAPBOX_TOKEN}
           style={{ width: '100%', height: '100%' }}
+          maxBounds={BRAZIL_BOUNDS}
+          minZoom={3}
         >
           <NavigationControl position="top-right" />
           <GeolocateControl 
