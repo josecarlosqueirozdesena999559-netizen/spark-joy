@@ -20,14 +20,28 @@ interface StateData {
   labelY: number;
 }
 
-// Region colors matching the reference image
+// Light region colors (base)
 const REGION_COLORS = {
-  norte: '#2E7D32',      // Green
-  nordeste: '#D32F2F',   // Red
-  'centro-oeste': '#FF9800', // Orange
-  sudeste: '#FDD835',    // Yellow
-  sul: '#7E57C2',        // Purple
+  norte: '#A5D6A7',      // Light Green
+  nordeste: '#FFCDD2',   // Light Red/Pink
+  'centro-oeste': '#FFE0B2', // Light Orange
+  sudeste: '#FFF9C4',    // Light Yellow
+  sul: '#E1BEE7',        // Light Purple
 };
+
+// Heat colors based on user density (from cold to hot)
+const HEAT_COLORS = [
+  '#E8F5E9', // Very cold - almost no users
+  '#C8E6C9', // Cold
+  '#A5D6A7', // Cool
+  '#81C784', // Mild
+  '#66BB6A', // Warm
+  '#FFA726', // Warmer
+  '#FF7043', // Hot
+  '#F44336', // Very Hot
+  '#D32F2F', // Intense
+  '#B71C1C', // Maximum heat
+];
 
 // SVG paths for Brazilian states (simplified)
 const BRAZIL_STATES: StateData[] = [
@@ -157,21 +171,34 @@ const BrazilStatesMap: React.FC = () => {
     return stateCounts.find(s => s.state === abbr)?.count || 0;
   };
 
+  const maxCount = Math.max(...stateCounts.map(s => s.count), 1);
+
+  const getHeatColor = (count: number): string => {
+    if (count === 0) return HEAT_COLORS[0];
+    const intensity = Math.min(Math.floor((count / maxCount) * 9), 9);
+    return HEAT_COLORS[intensity];
+  };
+
   const getStateColor = (state: StateData): string => {
+    const count = getStateCount(state.abbr);
     const isSelected = filter === state.abbr;
     const isFiltered = filter !== 'all' && filter !== state.abbr;
     
-    if (isFiltered) return '#E0E0E0';
-    if (isSelected || hoveredState === state.abbr) {
-      return REGION_COLORS[state.region];
+    if (isFiltered) return '#F5F5F5';
+    
+    // Use heat color based on user count
+    if (count > 0) {
+      return getHeatColor(count);
     }
+    
+    // Default to light region color if no users
     return REGION_COLORS[state.region];
   };
 
   const getStateOpacity = (state: StateData): number => {
-    if (filter !== 'all' && filter !== state.abbr) return 0.3;
+    if (filter !== 'all' && filter !== state.abbr) return 0.4;
     if (hoveredState === state.abbr) return 1;
-    return 0.85;
+    return 0.9;
   };
 
   const otherStates = stateCounts.filter(s => !MAIN_STATES.includes(s.state));
@@ -255,22 +282,21 @@ const BrazilStatesMap: React.FC = () => {
         )}
       </div>
 
-      {/* Legend */}
+      {/* Heat Legend */}
       <div className="absolute bottom-24 left-4 z-10 bg-card/95 backdrop-blur-md rounded-xl p-3 shadow-lg border border-border/50">
-        <span className="text-xs font-medium mb-2 block">Regiões</span>
-        <div className="space-y-1.5">
-          {[
-            { name: 'Norte', color: REGION_COLORS.norte },
-            { name: 'Nordeste', color: REGION_COLORS.nordeste },
-            { name: 'Centro-Oeste', color: REGION_COLORS['centro-oeste'] },
-            { name: 'Sudeste', color: REGION_COLORS.sudeste },
-            { name: 'Sul', color: REGION_COLORS.sul },
-          ].map(({ name, color }) => (
-            <div key={name} className="flex items-center gap-2">
-              <div className="w-4 h-3 rounded-sm" style={{ backgroundColor: color }} />
-              <span className="text-[10px] text-muted-foreground">{name}</span>
-            </div>
+        <span className="text-xs font-medium mb-2 block">Intensidade de usuárias</span>
+        <div className="flex items-center gap-0.5 mb-1">
+          {HEAT_COLORS.map((color, i) => (
+            <div 
+              key={i} 
+              className="w-3 h-5 first:rounded-l last:rounded-r" 
+              style={{ backgroundColor: color }} 
+            />
           ))}
+        </div>
+        <div className="flex justify-between text-[9px] text-muted-foreground">
+          <span>Poucos</span>
+          <span>Muitos</span>
         </div>
       </div>
 
@@ -320,8 +346,8 @@ const BrazilStatesMap: React.FC = () => {
                 style={{
                   fontSize: state.abbr === 'DF' ? '8px' : '11px',
                   fontWeight: 'bold',
-                  fill: ['sudeste'].includes(state.region) ? '#333' : '#FFF',
-                  textShadow: ['sudeste'].includes(state.region) ? 'none' : '0 1px 2px rgba(0,0,0,0.3)',
+                  fill: '#333',
+                  textShadow: '0 0 3px rgba(255,255,255,0.8)',
                 }}
               >
                 {state.abbr}
@@ -337,8 +363,8 @@ const BrazilStatesMap: React.FC = () => {
                   style={{
                     fontSize: '8px',
                     fontWeight: '500',
-                    fill: ['sudeste'].includes(state.region) ? '#555' : '#FFF',
-                    textShadow: ['sudeste'].includes(state.region) ? 'none' : '0 1px 2px rgba(0,0,0,0.3)',
+                    fill: '#444',
+                    textShadow: '0 0 2px rgba(255,255,255,0.8)',
                   }}
                 >
                   ({getStateCount(state.abbr)})
