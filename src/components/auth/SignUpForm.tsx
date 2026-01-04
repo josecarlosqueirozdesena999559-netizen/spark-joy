@@ -138,27 +138,55 @@ export const SignUpForm: React.FC<SignUpFormProps> = ({ onSuccess, onSwitchToLog
   };
   if (isRegistering) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 space-y-6 animate-fade-in">
-        <div className="relative">
-          <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center animate-pulse-soft">
-            <Sparkles className="w-12 h-12 text-primary animate-spin" style={{ animationDuration: '3s' }} />
+      <div className="flex flex-col items-center justify-center py-16 px-6 animate-fade-in">
+        {/* Animated container */}
+        <div className="relative mb-8">
+          {/* Outer glow ring */}
+          <div className="absolute inset-0 w-32 h-32 rounded-full bg-primary/20 blur-xl animate-pulse" />
+          
+          {/* Main circle with gradient */}
+          <div className="relative w-28 h-28 rounded-full bg-gradient-to-br from-primary/30 via-primary/20 to-primary/10 flex items-center justify-center shadow-2xl">
+            {/* Inner spinning border */}
+            <div className="absolute inset-2 rounded-full border-[3px] border-primary/40 border-t-primary animate-spin" style={{ animationDuration: '1.5s' }} />
+            
+            {/* Center icon */}
+            <div className="relative z-10 w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+              <Sparkles className="w-8 h-8 text-primary" />
+            </div>
           </div>
-          <div className="absolute inset-0 rounded-full border-4 border-primary border-t-transparent animate-spin" />
         </div>
-        <div className="text-center space-y-2">
-          <h3 className="text-xl font-semibold text-foreground">Criando sua conta...</h3>
-          <p className="text-sm text-muted-foreground">
-            Estamos preparando tudo para você
+
+        {/* Text content */}
+        <div className="text-center space-y-3 mb-8">
+          <h3 className="text-2xl font-bold text-foreground">Criando sua conta</h3>
+          <p className="text-muted-foreground text-sm max-w-[240px] mx-auto leading-relaxed">
+            Estamos preparando tudo com carinho para você
           </p>
         </div>
-        <div className="flex gap-1">
-          {[0, 1, 2].map((i) => (
+
+        {/* Animated dots */}
+        <div className="flex items-center gap-2">
+          {[0, 1, 2, 3].map((i) => (
             <div
               key={i}
-              className="w-2 h-2 rounded-full bg-primary animate-bounce"
-              style={{ animationDelay: `${i * 0.15}s` }}
+              className="w-2.5 h-2.5 rounded-full bg-primary/60 animate-pulse"
+              style={{ 
+                animationDelay: `${i * 0.2}s`,
+                animationDuration: '1s'
+              }}
             />
           ))}
+        </div>
+
+        {/* Progress bar */}
+        <div className="w-48 h-1.5 bg-muted rounded-full overflow-hidden mt-6">
+          <div 
+            className="h-full bg-primary rounded-full animate-pulse"
+            style={{ 
+              width: '60%',
+              animation: 'progressPulse 2s ease-in-out infinite'
+            }}
+          />
         </div>
       </div>
     );
