@@ -316,62 +316,93 @@ const BrazilStatesMap: React.FC = () => {
       </Button>
 
       {/* Brazil Map SVG */}
-      <div className="flex-1 flex items-center justify-center p-4 pt-24 pb-20">
+      <div className="flex-1 flex items-center justify-center p-2 pt-20 pb-16">
         <svg
-          viewBox="0 0 600 850"
-          className="w-full h-full max-w-lg"
+          viewBox="30 30 560 800"
+          className="w-full h-full max-w-md"
           style={{ filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.1))' }}
         >
           {/* States */}
-          {BRAZIL_STATES.map((state) => (
-            <g key={state.abbr}>
-              <path
-                d={state.path}
-                fill={getStateColor(state)}
-                stroke="#FFFFFF"
-                strokeWidth="2"
-                opacity={getStateOpacity(state)}
-                className="transition-all duration-300 cursor-pointer"
-                onMouseEnter={() => setHoveredState(state.abbr)}
-                onMouseLeave={() => setHoveredState(null)}
-                onClick={() => setFilter(filter === state.abbr ? 'all' : state.abbr)}
-              />
-              {/* State label */}
-              <text
-                x={state.labelX}
-                y={state.labelY}
-                textAnchor="middle"
-                dominantBaseline="middle"
-                className="pointer-events-none select-none"
-                style={{
-                  fontSize: state.abbr === 'DF' ? '8px' : '11px',
-                  fontWeight: 'bold',
-                  fill: '#333',
-                  textShadow: '0 0 3px rgba(255,255,255,0.8)',
-                }}
-              >
-                {state.abbr}
-              </text>
-              {/* User count */}
-              {getStateCount(state.abbr) > 0 && (
+          {BRAZIL_STATES.map((state) => {
+            const count = getStateCount(state.abbr);
+            const isSmallState = ['DF', 'SE', 'AL', 'RN', 'PB'].includes(state.abbr);
+            
+            return (
+              <g key={state.abbr}>
+                <path
+                  d={state.path}
+                  fill={getStateColor(state)}
+                  stroke="#FFFFFF"
+                  strokeWidth="2"
+                  opacity={getStateOpacity(state)}
+                  className="transition-all duration-300 cursor-pointer"
+                  onMouseEnter={() => setHoveredState(state.abbr)}
+                  onMouseLeave={() => setHoveredState(null)}
+                  onClick={() => setFilter(filter === state.abbr ? 'all' : state.abbr)}
+                />
+                {/* State label with count */}
                 <text
                   x={state.labelX}
-                  y={state.labelY + 12}
+                  y={state.labelY - (count > 0 && !isSmallState ? 5 : 0)}
                   textAnchor="middle"
                   dominantBaseline="middle"
                   className="pointer-events-none select-none"
                   style={{
-                    fontSize: '8px',
-                    fontWeight: '500',
-                    fill: '#444',
-                    textShadow: '0 0 2px rgba(255,255,255,0.8)',
+                    fontSize: isSmallState ? '10px' : '14px',
+                    fontWeight: '700',
+                    fill: '#1a1a1a',
+                    textShadow: '0 0 4px rgba(255,255,255,1), 0 0 8px rgba(255,255,255,0.8)',
                   }}
                 >
-                  ({getStateCount(state.abbr)})
+                  {state.abbr}
                 </text>
-              )}
-            </g>
-          ))}
+                {/* User count - larger and more visible */}
+                {count > 0 && !isSmallState && (
+                  <text
+                    x={state.labelX}
+                    y={state.labelY + 12}
+                    textAnchor="middle"
+                    dominantBaseline="middle"
+                    className="pointer-events-none select-none"
+                    style={{
+                      fontSize: '12px',
+                      fontWeight: '700',
+                      fill: '#E91E63',
+                      textShadow: '0 0 4px rgba(255,255,255,1), 0 0 6px rgba(255,255,255,0.9)',
+                    }}
+                  >
+                    {count}
+                  </text>
+                )}
+                {/* Count badge for small states */}
+                {count > 0 && isSmallState && (
+                  <>
+                    <circle
+                      cx={state.labelX + 12}
+                      cy={state.labelY - 8}
+                      r="8"
+                      fill="#E91E63"
+                      className="pointer-events-none"
+                    />
+                    <text
+                      x={state.labelX + 12}
+                      y={state.labelY - 8}
+                      textAnchor="middle"
+                      dominantBaseline="middle"
+                      className="pointer-events-none select-none"
+                      style={{
+                        fontSize: '9px',
+                        fontWeight: '700',
+                        fill: '#FFFFFF',
+                      }}
+                    >
+                      {count}
+                    </text>
+                  </>
+                )}
+              </g>
+            );
+          })}
         </svg>
       </div>
 
