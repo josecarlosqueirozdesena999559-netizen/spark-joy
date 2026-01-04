@@ -211,30 +211,42 @@ export type Database = {
       profiles: {
         Row: {
           avatar_icon: string
+          city: string | null
           created_at: string
           deleted_at: string | null
           id: string
+          latitude: number | null
+          longitude: number | null
           push_token: string | null
+          state: string | null
           terms_accepted_at: string | null
           updated_at: string
           username: string
         }
         Insert: {
           avatar_icon?: string
+          city?: string | null
           created_at?: string
           deleted_at?: string | null
           id: string
+          latitude?: number | null
+          longitude?: number | null
           push_token?: string | null
+          state?: string | null
           terms_accepted_at?: string | null
           updated_at?: string
           username: string
         }
         Update: {
           avatar_icon?: string
+          city?: string | null
           created_at?: string
           deleted_at?: string | null
           id?: string
+          latitude?: number | null
+          longitude?: number | null
           push_token?: string | null
+          state?: string | null
           terms_accepted_at?: string | null
           updated_at?: string
           username?: string
