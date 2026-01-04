@@ -1,46 +1,27 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Map, { Source, Layer, NavigationControl } from 'react-map-gl/mapbox';
 import type { MapRef } from 'react-map-gl/mapbox';
-import { Flame, Filter, Users, MapPin, RefreshCw, Loader2 } from 'lucide-react';
+import { Flame, Filter, Users, RefreshCw, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
+import { useUserLocation } from '@/hooks/useUserLocation';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
 const MAPBOX_TOKEN = 'pk.eyJ1Ijoiam9zZWNhcmxvc3FqZGZuZiIsImEiOiJjbWp2dnZzNjI1bHYyM2VwczV2eXFiZzNzIn0.tkqBfgDN54sp53HwuM6gGw';
 
-// Brazilian states with sample coordinates for demonstration
-const BRAZIL_STATES = [
-  { name: 'São Paulo', lat: -23.5505, lng: -46.6333, weight: 0.9 },
-  { name: 'Rio de Janeiro', lat: -22.9068, lng: -43.1729, weight: 0.85 },
-  { name: 'Minas Gerais', lat: -19.9167, lng: -43.9345, weight: 0.7 },
-  { name: 'Bahia', lat: -12.9714, lng: -38.5014, weight: 0.65 },
-  { name: 'Paraná', lat: -25.4284, lng: -49.2733, weight: 0.6 },
-  { name: 'Rio Grande do Sul', lat: -30.0346, lng: -51.2177, weight: 0.55 },
-  { name: 'Pernambuco', lat: -8.0476, lng: -34.877, weight: 0.5 },
-  { name: 'Ceará', lat: -3.7172, lng: -38.5433, weight: 0.45 },
-  { name: 'Pará', lat: -1.4558, lng: -48.4902, weight: 0.4 },
-  { name: 'Goiás', lat: -16.6869, lng: -49.2648, weight: 0.35 },
-  { name: 'Maranhão', lat: -2.5307, lng: -44.3068, weight: 0.3 },
-  { name: 'Santa Catarina', lat: -27.5954, lng: -48.548, weight: 0.45 },
-  { name: 'Amazonas', lat: -3.119, lng: -60.0217, weight: 0.25 },
-  { name: 'Espírito Santo', lat: -20.3155, lng: -40.3128, weight: 0.35 },
-  { name: 'Mato Grosso', lat: -15.601, lng: -56.0974, weight: 0.2 },
-  { name: 'Distrito Federal', lat: -15.7942, lng: -47.8822, weight: 0.5 },
-];
-
-interface HeatMapPoint {
-  lat: number;
-  lng: number;
-  weight: number;
+interface UserLocation {
+  latitude: number;
+  longitude: number;
+  state: string | null;
 }
 
-type FilterType = 'all' | 'high' | 'medium' | 'low';
+type FilterType = 'all' | 'SP' | 'RJ' | 'MG' | 'other';
 
 const HeatMap: React.FC = () => {
   const mapRef = useRef<MapRef>(null);
   const [loading, setLoading] = useState(true);
-  const [heatmapData, setHeatmapData] = useState<HeatMapPoint[]>([]);
+  const [userLocations, setUserLocations] = useState<UserLocation[]>([]);
   const [filter, setFilter] = useState<FilterType>('all');
   const [totalUsers, setTotalUsers] = useState(0);
   const [viewState, setViewState] = useState({
@@ -49,36 +30,34 @@ const HeatMap: React.FC = () => {
     zoom: 3.5,
   });
 
-  // Fetch user data and generate heatmap points
+  // Hook to save current user's location
+  useUserLocation();
+
+  // Fetch real user locations from database
   const fetchData = async () => {
     setLoading(true);
     try {
-      // Get count of users
-      const { count } = await supabase
+      const { data, error, count } = await supabase
         .from('profiles')
-        .select('*', { count: 'exact', head: true });
-      
-      setTotalUsers(count || 0);
+        .select('latitude, longitude, state', { count: 'exact' })
+        .not('latitude', 'is', null)
+        .not('longitude', 'is', null)
+        .is('deleted_at', null);
 
-      // Generate heatmap data based on states (simulating user distribution)
-      // In a real app, you would fetch actual user locations
-      const points: HeatMapPoint[] = [];
+      if (error) {
+        console.error('Error fetching locations:', error);
+        return;
+      }
+
+      setUserLocations(data || []);
       
-      BRAZIL_STATES.forEach(state => {
-        // Create multiple points around each state center for heat effect
-        const numPoints = Math.floor(state.weight * 20) + 5;
-        for (let i = 0; i < numPoints; i++) {
-          const offsetLat = (Math.random() - 0.5) * 2;
-          const offsetLng = (Math.random() - 0.5) * 2;
-          points.push({
-            lat: state.lat + offsetLat,
-            lng: state.lng + offsetLng,
-            weight: state.weight * (0.7 + Math.random() * 0.3),
-          });
-        }
-      });
+      // Get total user count (including those without location)
+      const { count: totalCount } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true })
+        .is('deleted_at', null);
       
-      setHeatmapData(points);
+      setTotalUsers(totalCount || 0);
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -86,30 +65,58 @@ const HeatMap: React.FC = () => {
     }
   };
 
+  // Set up realtime subscription
   useEffect(() => {
     fetchData();
+
+    // Subscribe to profile changes for real-time updates
+    const channel = supabase
+      .channel('profiles-location-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'profiles',
+        },
+        () => {
+          // Refetch data when any profile changes
+          fetchData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
-  // Filter heatmap data based on intensity
-  const filteredData = heatmapData.filter(point => {
+  // Filter locations based on state
+  const filteredLocations = userLocations.filter(loc => {
     if (filter === 'all') return true;
-    if (filter === 'high') return point.weight >= 0.7;
-    if (filter === 'medium') return point.weight >= 0.4 && point.weight < 0.7;
-    if (filter === 'low') return point.weight < 0.4;
+    if (filter === 'SP') return loc.state?.includes('São Paulo') || loc.state?.includes('Sao Paulo');
+    if (filter === 'RJ') return loc.state?.includes('Rio de Janeiro');
+    if (filter === 'MG') return loc.state?.includes('Minas Gerais');
+    if (filter === 'other') {
+      return !loc.state?.includes('São Paulo') && 
+             !loc.state?.includes('Sao Paulo') && 
+             !loc.state?.includes('Rio de Janeiro') && 
+             !loc.state?.includes('Minas Gerais');
+    }
     return true;
   });
 
   // Create GeoJSON for heatmap
   const geojsonData: GeoJSON.FeatureCollection = {
     type: 'FeatureCollection',
-    features: filteredData.map(point => ({
+    features: filteredLocations.map(loc => ({
       type: 'Feature',
       properties: {
-        weight: point.weight,
+        weight: 1,
       },
       geometry: {
         type: 'Point',
-        coordinates: [point.lng, point.lat],
+        coordinates: [loc.longitude, loc.latitude],
       },
     })),
   };
@@ -119,7 +126,7 @@ const HeatMap: React.FC = () => {
     type: 'heatmap',
     source: 'heatmap-source',
     paint: {
-      'heatmap-weight': ['get', 'weight'],
+      'heatmap-weight': 1,
       'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 0, 1, 9, 3],
       'heatmap-color': [
         'interpolate',
@@ -132,10 +139,12 @@ const HeatMap: React.FC = () => {
         0.8, 'rgba(190, 24, 93, 0.9)',
         1, 'rgba(157, 23, 77, 1)',
       ],
-      'heatmap-radius': ['interpolate', ['linear'], ['zoom'], 0, 20, 9, 40],
+      'heatmap-radius': ['interpolate', ['linear'], ['zoom'], 0, 30, 9, 50],
       'heatmap-opacity': 0.8,
     },
   };
+
+  const usersWithLocation = userLocations.length;
 
   return (
     <div className="flex-1 flex flex-col bg-background overflow-hidden relative">
@@ -144,7 +153,7 @@ const HeatMap: React.FC = () => {
         <div className="bg-card/95 backdrop-blur-md rounded-xl p-2 shadow-lg border border-border/50 flex items-center gap-2">
           <Filter className="w-4 h-4 text-muted-foreground" />
           <div className="flex gap-1">
-            {(['all', 'high', 'medium', 'low'] as FilterType[]).map((f) => (
+            {(['all', 'SP', 'RJ', 'MG', 'other'] as FilterType[]).map((f) => (
               <Button
                 key={f}
                 size="sm"
@@ -153,9 +162,10 @@ const HeatMap: React.FC = () => {
                 onClick={() => setFilter(f)}
               >
                 {f === 'all' && 'Todos'}
-                {f === 'high' && 'Alta'}
-                {f === 'medium' && 'Média'}
-                {f === 'low' && 'Baixa'}
+                {f === 'SP' && 'SP'}
+                {f === 'RJ' && 'RJ'}
+                {f === 'MG' && 'MG'}
+                {f === 'other' && 'Outros'}
               </Button>
             ))}
           </div>
@@ -163,7 +173,7 @@ const HeatMap: React.FC = () => {
         
         <Badge variant="secondary" className="gap-1.5 py-1.5 px-3">
           <Users className="w-3.5 h-3.5" />
-          {totalUsers} usuárias
+          {usersWithLocation}/{totalUsers} usuárias
         </Badge>
       </div>
 
@@ -206,7 +216,7 @@ const HeatMap: React.FC = () => {
           mapStyle="mapbox://styles/mapbox/dark-v11"
           mapboxAccessToken={MAPBOX_TOKEN}
           style={{ width: '100%', height: '100%' }}
-          maxBounds={[[-75, -35], [-30, 6]]} // Restrict to Brazil region
+          maxBounds={[[-75, -35], [-30, 6]]}
         >
           <NavigationControl position="top-right" />
           
@@ -215,6 +225,19 @@ const HeatMap: React.FC = () => {
           </Source>
         </Map>
       </div>
+
+      {/* Empty state */}
+      {!loading && usersWithLocation === 0 && (
+        <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+          <div className="bg-card/95 backdrop-blur-md rounded-xl p-6 shadow-lg border border-border/50 text-center">
+            <Users className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+            <p className="text-sm font-medium">Nenhuma usuária com localização</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              As usuárias aparecerão aqui quando compartilharem sua localização
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Loading overlay */}
       {loading && (
