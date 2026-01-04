@@ -18,39 +18,43 @@ export const GenerateReportButton = ({ items, decryptContent, password }: Genera
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
-  // Helper function to load decrypted image from storage as base64
-  const loadEncryptedImageAsBase64 = async (filePath: string): Promise<string | null> => {
-    try {
-      // Download the encrypted file from storage
-      const { data, error } = await supabase.storage
-        .from('vault-files')
-        .download(filePath);
+  type PdfImage = { dataUrl: string; format: 'JPEG' | 'PNG' };
 
+  const inferImageMime = (fileName?: string | null): { mime: string; format: PdfImage['format'] } => {
+    const lower = (fileName || '').toLowerCase();
+    if (lower.endsWith('.png')) return { mime: 'image/png', format: 'PNG' };
+    if (lower.endsWith('.webp')) return { mime: 'image/webp', format: 'JPEG' }; // jsPDF has limited webp support; convert to JPEG container
+    return { mime: 'image/jpeg', format: 'JPEG' };
+  };
+
+  // Helper function to load decrypted image from storage as base64
+  const loadEncryptedImageAsBase64 = async (filePath: string, originalFileName?: string | null): Promise<PdfImage | null> => {
+    try {
+      const { data, error } = await supabase.storage.from('vault-files').download(filePath);
       if (error || !data) {
         console.error('Error downloading file:', error);
         return null;
       }
 
-      // Read the encrypted content as text
       const encryptedContent = await data.text();
-      
-      // Decrypt the file
-      const decryptedBlob = decryptFile(encryptedContent, password, 'image/jpeg');
+      const { mime, format } = inferImageMime(originalFileName);
+
+      // Decrypt the file bytes back into a Blob with the right mime
+      const decryptedBlob = decryptFile(encryptedContent, password, mime);
       if (!decryptedBlob) {
         console.error('Error decrypting file');
         return null;
       }
 
-      // Convert blob to base64 using FileReader
-      return new Promise((resolve) => {
+      const dataUrl = await new Promise<string | null>((resolve) => {
         const reader = new FileReader();
-        reader.onloadend = () => {
-          const result = reader.result as string;
-          resolve(result);
-        };
+        reader.onloadend = () => resolve(reader.result as string);
         reader.onerror = () => resolve(null);
         reader.readAsDataURL(decryptedBlob);
       });
+
+      if (!dataUrl) return null;
+      return { dataUrl, format };
     } catch (e) {
       console.error('Error loading encrypted image:', e);
       return null;
@@ -256,52 +260,41 @@ export const GenerateReportButton = ({ items, decryptContent, password }: Genera
 
         // Photo - Load and display decrypted image
         if (item.item_type === 'photo' && item.encrypted_file_path) {
-          const decryptedPath = decryptContent(item.encrypted_file_path);
-          
-          if (decryptedPath) {
-            const base64Image = await loadEncryptedImageAsBase64(decryptedPath);
-            
-            if (base64Image) {
-              // Calculate image dimensions to fit page
-              const maxImgWidth = pageWidth - 40;
-              const maxImgHeight = pageHeight - yPosition - 50;
-              
-              // Use a reasonable size that fits well
-              const imgWidth = Math.min(maxImgWidth, 160);
-              const imgHeight = Math.min(maxImgHeight, 120);
-              
-              // Center the image
-              const imgX = (pageWidth - imgWidth) / 2;
-              
-              // Add border around image
-              doc.setDrawColor(200, 200, 200);
-              doc.setLineWidth(1);
-              doc.roundedRect(imgX - 2, yPosition - 2, imgWidth + 4, imgHeight + 4, 3, 3, 'S');
-              
-              // Add the image
-              try {
-                doc.addImage(base64Image, 'JPEG', imgX, yPosition, imgWidth, imgHeight);
-              } catch (imgError) {
-                console.error('Error adding image to PDF:', imgError);
-                // Fallback placeholder
-                doc.setFillColor(245, 245, 245);
-                doc.roundedRect(imgX, yPosition, imgWidth, imgHeight, 3, 3, 'F');
-                doc.setFontSize(10);
-                doc.setTextColor(120, 120, 120);
-                doc.text('[Erro ao carregar imagem]', pageWidth / 2, yPosition + imgHeight / 2, { align: 'center' });
-              }
-            } else {
-              // Placeholder if image couldn't be loaded
-              const imgWidth = 160;
-              const imgHeight = 100;
-              const imgX = (pageWidth - imgWidth) / 2;
-              
+          const originalName = item.file_name ? decryptContent(item.file_name) : null;
+          const pdfImage = await loadEncryptedImageAsBase64(item.encrypted_file_path, originalName);
+
+          if (pdfImage) {
+            const maxImgWidth = pageWidth - 40;
+            const maxImgHeight = pageHeight - yPosition - 50;
+
+            const imgWidth = Math.min(maxImgWidth, 160);
+            const imgHeight = Math.min(maxImgHeight, 120);
+            const imgX = (pageWidth - imgWidth) / 2;
+
+            doc.setDrawColor(200, 200, 200);
+            doc.setLineWidth(1);
+            doc.roundedRect(imgX - 2, yPosition - 2, imgWidth + 4, imgHeight + 4, 3, 3, 'S');
+
+            try {
+              doc.addImage(pdfImage.dataUrl, pdfImage.format, imgX, yPosition, imgWidth, imgHeight);
+            } catch (imgError) {
+              console.error('Error adding image to PDF:', imgError);
               doc.setFillColor(245, 245, 245);
               doc.roundedRect(imgX, yPosition, imgWidth, imgHeight, 3, 3, 'F');
               doc.setFontSize(10);
               doc.setTextColor(120, 120, 120);
-              doc.text('[Imagem protegida - consultar cofre digital]', pageWidth / 2, yPosition + 50, { align: 'center' });
+              doc.text('[Erro ao carregar imagem]', pageWidth / 2, yPosition + imgHeight / 2, { align: 'center' });
             }
+          } else {
+            const imgWidth = 160;
+            const imgHeight = 100;
+            const imgX = (pageWidth - imgWidth) / 2;
+
+            doc.setFillColor(245, 245, 245);
+            doc.roundedRect(imgX, yPosition, imgWidth, imgHeight, 3, 3, 'F');
+            doc.setFontSize(10);
+            doc.setTextColor(120, 120, 120);
+            doc.text('[Imagem protegida - consultar cofre digital]', pageWidth / 2, yPosition + 50, { align: 'center' });
           }
         }
 
