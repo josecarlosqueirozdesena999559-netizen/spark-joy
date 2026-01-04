@@ -45,8 +45,8 @@ const Auth: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-4 py-6 gradient-soft safe-area-inset">
-      <div className="w-full max-w-sm">
+    <div className="min-h-screen flex flex-col items-center justify-center px-6 py-8 gradient-soft safe-area-inset">
+      <div className="w-full max-w-sm px-2">
         {/* Logo only on login and forgot-password views */}
         {view !== 'signup' && (
           <div className="text-center mb-6">
