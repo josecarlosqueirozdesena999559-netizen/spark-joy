@@ -136,17 +136,25 @@ const App = () => {
   const [showSplash, setShowSplash] = useState(true);
 
   useEffect(() => {
-    // Hide native splash after a small delay to ensure web splash is visible
-    const hideNativeSplash = async () => {
-      await new Promise(resolve => setTimeout(resolve, 500));
-      try {
-        await SplashScreen.hide();
-      } catch (error) {
-        // Ignore error when running in browser (not Capacitor)
-        console.log('Running in browser mode, native splash not available');
-      }
+    const initializeApp = async () => {
+      console.log("App carregado, preparando transição...");
+      
+      // Aguarda a animação do Lovable renderizar o 1º frame
+      setTimeout(async () => {
+        try {
+          // Remove a tela estática do Android com fade suave
+          await SplashScreen.hide({
+            fadeOutDuration: 500
+          });
+          console.log("Splash nativo removido.");
+        } catch (error) {
+          // Evita erro no navegador do PC
+          console.warn("SplashScreen plugin não disponível no navegador.");
+        }
+      }, 800);
     };
-    hideNativeSplash();
+
+    initializeApp();
   }, []);
 
   const handleSplashComplete = () => {
