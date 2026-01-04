@@ -152,11 +152,8 @@ export const useNotifications = () => {
           });
           setUnreadCount(prev => prev + 1);
           
-          // Show toast for new notification
-          toast({
-            title: newNotification.title,
-            description: newNotification.message,
-          });
+          // Note: Removed toast for in-app notifications to avoid interruption
+          // Push notifications are handled separately for native platforms
         }
       )
       .on(
