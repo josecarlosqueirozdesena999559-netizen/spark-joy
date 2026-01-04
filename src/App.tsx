@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -7,6 +7,8 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { PermissionModal } from "@/components/permissions/PermissionModal";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
+import { SplashScreen as WebSplashScreen } from "@/components/auth/SplashScreen";
+import { SplashScreen } from "@capacitor/splash-screen";
 import Auth from "./pages/Auth";
 import Home from "./pages/Home";
 import Mapa from "./pages/Mapa";
@@ -130,18 +132,48 @@ const AppRoutes = () => {
   );
 };
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <AuthProvider>
-          <AppRoutes />
-        </AuthProvider>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+const App = () => {
+  const [showSplash, setShowSplash] = useState(true);
+
+  useEffect(() => {
+    // Hide native splash after a small delay to ensure web splash is visible
+    const hideNativeSplash = async () => {
+      await new Promise(resolve => setTimeout(resolve, 500));
+      try {
+        await SplashScreen.hide();
+      } catch (error) {
+        // Ignore error when running in browser (not Capacitor)
+        console.log('Running in browser mode, native splash not available');
+      }
+    };
+    hideNativeSplash();
+  }, []);
+
+  const handleSplashComplete = () => {
+    setShowSplash(false);
+  };
+
+  if (showSplash) {
+    return (
+      <div className="fixed inset-0 w-screen h-screen min-h-[100dvh] overflow-hidden">
+        <WebSplashScreen onComplete={handleSplashComplete} />
+      </div>
+    );
+  }
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <AuthProvider>
+            <AppRoutes />
+          </AuthProvider>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;
