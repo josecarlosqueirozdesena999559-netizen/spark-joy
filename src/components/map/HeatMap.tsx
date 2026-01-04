@@ -1,14 +1,21 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Map, { Source, Layer, NavigationControl } from 'react-map-gl/mapbox';
 import type { MapRef } from 'react-map-gl/mapbox';
-import { Flame, Filter, Users, RefreshCw, Loader2 } from 'lucide-react';
+import { Flame, Filter, Users, RefreshCw, Loader2, ChevronDown, ChevronUp, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserLocation } from '@/hooks/useUserLocation';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
 const MAPBOX_TOKEN = 'pk.eyJ1Ijoiam9zZWNhcmxvc3FqZGZuZiIsImEiOiJjbWp2dnZzNjI1bHYyM2VwczV2eXFiZzNzIn0.tkqBfgDN54sp53HwuM6gGw';
+
+// Brazil bounds to restrict map view
+const BRAZIL_BOUNDS: [[number, number], [number, number]] = [
+  [-73.9872, -33.7683], // Southwest
+  [-34.7299, 5.2718],   // Northeast
+];
 
 interface UserLocation {
   latitude: number;
@@ -16,7 +23,15 @@ interface UserLocation {
   state: string | null;
 }
 
-type FilterType = 'all' | 'SP' | 'RJ' | 'MG' | 'other';
+interface StateCount {
+  state: string;
+  count: number;
+}
+
+// Main states for quick filter
+const MAIN_STATES = ['SP', 'RJ', 'MG', 'BA', 'CE', 'RS'];
+
+type FilterType = 'all' | string;
 
 const HeatMap: React.FC = () => {
   const mapRef = useRef<MapRef>(null);
@@ -24,6 +39,8 @@ const HeatMap: React.FC = () => {
   const [userLocations, setUserLocations] = useState<UserLocation[]>([]);
   const [filter, setFilter] = useState<FilterType>('all');
   const [totalUsers, setTotalUsers] = useState(0);
+  const [showOtherStates, setShowOtherStates] = useState(false);
+  const [stateCounts, setStateCounts] = useState<StateCount[]>([]);
   const [viewState, setViewState] = useState({
     longitude: -55.0,
     latitude: -15.0,
@@ -33,13 +50,33 @@ const HeatMap: React.FC = () => {
   // Hook to save current user's location
   useUserLocation();
 
+  // Extract state abbreviation from full state name
+  const getStateAbbreviation = (stateName: string | null): string => {
+    if (!stateName) return 'Desconhecido';
+    
+    const stateMap: Record<string, string> = {
+      'Acre': 'AC', 'Alagoas': 'AL', 'Amapá': 'AP', 'Amazonas': 'AM',
+      'Bahia': 'BA', 'Ceará': 'CE', 'Distrito Federal': 'DF', 'Espírito Santo': 'ES',
+      'Goiás': 'GO', 'Maranhão': 'MA', 'Mato Grosso': 'MT', 'Mato Grosso do Sul': 'MS',
+      'Minas Gerais': 'MG', 'Pará': 'PA', 'Paraíba': 'PB', 'Paraná': 'PR',
+      'Pernambuco': 'PE', 'Piauí': 'PI', 'Rio de Janeiro': 'RJ', 'Rio Grande do Norte': 'RN',
+      'Rio Grande do Sul': 'RS', 'Rondônia': 'RO', 'Roraima': 'RR', 'Santa Catarina': 'SC',
+      'São Paulo': 'SP', 'Sao Paulo': 'SP', 'Sergipe': 'SE', 'Tocantins': 'TO'
+    };
+
+    for (const [fullName, abbr] of Object.entries(stateMap)) {
+      if (stateName.includes(fullName)) return abbr;
+    }
+    return stateName.substring(0, 2).toUpperCase();
+  };
+
   // Fetch real user locations from database
   const fetchData = async () => {
     setLoading(true);
     try {
-      const { data, error, count } = await supabase
+      const { data, error } = await supabase
         .from('profiles')
-        .select('latitude, longitude, state', { count: 'exact' })
+        .select('latitude, longitude, state')
         .not('latitude', 'is', null)
         .not('longitude', 'is', null)
         .is('deleted_at', null);
@@ -51,7 +88,20 @@ const HeatMap: React.FC = () => {
 
       setUserLocations(data || []);
       
-      // Get total user count (including those without location)
+      // Calculate state counts
+      const counts: Record<string, number> = {};
+      (data || []).forEach(loc => {
+        const abbr = getStateAbbreviation(loc.state);
+        counts[abbr] = (counts[abbr] || 0) + 1;
+      });
+
+      const sortedCounts = Object.entries(counts)
+        .map(([state, count]) => ({ state, count }))
+        .sort((a, b) => b.count - a.count);
+      
+      setStateCounts(sortedCounts);
+      
+      // Get total user count (all profiles, not just with location)
       const { count: totalCount } = await supabase
         .from('profiles')
         .select('*', { count: 'exact', head: true })
@@ -94,16 +144,8 @@ const HeatMap: React.FC = () => {
   // Filter locations based on state
   const filteredLocations = userLocations.filter(loc => {
     if (filter === 'all') return true;
-    if (filter === 'SP') return loc.state?.includes('São Paulo') || loc.state?.includes('Sao Paulo');
-    if (filter === 'RJ') return loc.state?.includes('Rio de Janeiro');
-    if (filter === 'MG') return loc.state?.includes('Minas Gerais');
-    if (filter === 'other') {
-      return !loc.state?.includes('São Paulo') && 
-             !loc.state?.includes('Sao Paulo') && 
-             !loc.state?.includes('Rio de Janeiro') && 
-             !loc.state?.includes('Minas Gerais');
-    }
-    return true;
+    const abbr = getStateAbbreviation(loc.state);
+    return abbr === filter;
   });
 
   // Create GeoJSON for heatmap
@@ -144,37 +186,86 @@ const HeatMap: React.FC = () => {
     },
   };
 
-  const usersWithLocation = userLocations.length;
+  // Get states not in main filter
+  const otherStates = stateCounts.filter(s => !MAIN_STATES.includes(s.state));
 
   return (
     <div className="flex-1 flex flex-col bg-background overflow-hidden relative">
       {/* Filter bar */}
-      <div className="absolute top-4 left-4 right-4 z-10 flex items-center gap-2 flex-wrap">
-        <div className="bg-card/95 backdrop-blur-md rounded-xl p-2 shadow-lg border border-border/50 flex items-center gap-2">
-          <Filter className="w-4 h-4 text-muted-foreground" />
-          <div className="flex gap-1">
-            {(['all', 'SP', 'RJ', 'MG', 'other'] as FilterType[]).map((f) => (
+      <div className="absolute top-4 left-4 right-4 z-10 flex flex-col gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="bg-card/95 backdrop-blur-md rounded-xl p-2 shadow-lg border border-border/50 flex items-center gap-2">
+            <Filter className="w-4 h-4 text-muted-foreground" />
+            <div className="flex gap-1 flex-wrap">
               <Button
-                key={f}
                 size="sm"
-                variant={filter === f ? 'default' : 'ghost'}
+                variant={filter === 'all' ? 'default' : 'ghost'}
                 className="h-7 text-xs"
-                onClick={() => setFilter(f)}
+                onClick={() => setFilter('all')}
               >
-                {f === 'all' && 'Todos'}
-                {f === 'SP' && 'SP'}
-                {f === 'RJ' && 'RJ'}
-                {f === 'MG' && 'MG'}
-                {f === 'other' && 'Outros'}
+                Todos
               </Button>
-            ))}
+              {MAIN_STATES.map((state) => {
+                const stateData = stateCounts.find(s => s.state === state);
+                return (
+                  <Button
+                    key={state}
+                    size="sm"
+                    variant={filter === state ? 'default' : 'ghost'}
+                    className="h-7 text-xs gap-1"
+                    onClick={() => setFilter(state)}
+                  >
+                    {state}
+                    {stateData && <span className="text-[10px] opacity-70">({stateData.count})</span>}
+                  </Button>
+                );
+              })}
+              <Button
+                size="sm"
+                variant={showOtherStates || (!MAIN_STATES.includes(filter) && filter !== 'all') ? 'secondary' : 'ghost'}
+                className="h-7 text-xs gap-1"
+                onClick={() => setShowOtherStates(!showOtherStates)}
+              >
+                Outros
+                {showOtherStates ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+              </Button>
+            </div>
           </div>
+          
+          <Badge variant="secondary" className="gap-1.5 py-1.5 px-3 whitespace-nowrap">
+            <Users className="w-3.5 h-3.5" />
+            {totalUsers} usuárias cadastradas
+          </Badge>
         </div>
-        
-        <Badge variant="secondary" className="gap-1.5 py-1.5 px-3">
-          <Users className="w-3.5 h-3.5" />
-          {usersWithLocation}/{totalUsers} usuárias
-        </Badge>
+
+        {/* Other states dropdown */}
+        {showOtherStates && otherStates.length > 0 && (
+          <div className="bg-card/95 backdrop-blur-md rounded-xl p-3 shadow-lg border border-border/50 animate-fade-in">
+            <div className="flex items-center gap-2 mb-2">
+              <MapPin className="w-4 h-4 text-muted-foreground" />
+              <span className="text-xs font-medium text-muted-foreground">Outros estados</span>
+            </div>
+            <ScrollArea className="max-h-40">
+              <div className="flex flex-wrap gap-1">
+                {otherStates.map(({ state, count }) => (
+                  <Button
+                    key={state}
+                    size="sm"
+                    variant={filter === state ? 'default' : 'outline'}
+                    className="h-7 text-xs gap-1"
+                    onClick={() => {
+                      setFilter(state);
+                      setShowOtherStates(false);
+                    }}
+                  >
+                    {state}
+                    <span className="text-[10px] opacity-70">({count})</span>
+                  </Button>
+                ))}
+              </div>
+            </ScrollArea>
+          </div>
+        )}
       </div>
 
       {/* Legend */}
@@ -213,10 +304,11 @@ const HeatMap: React.FC = () => {
           ref={mapRef}
           {...viewState}
           onMove={evt => setViewState(evt.viewState)}
-          mapStyle="mapbox://styles/mapbox/dark-v11"
+          mapStyle="mapbox://styles/mapbox/light-v11"
           mapboxAccessToken={MAPBOX_TOKEN}
           style={{ width: '100%', height: '100%' }}
-          maxBounds={[[-75, -35], [-30, 6]]}
+          maxBounds={BRAZIL_BOUNDS}
+          minZoom={3}
         >
           <NavigationControl position="top-right" />
           
@@ -227,13 +319,13 @@ const HeatMap: React.FC = () => {
       </div>
 
       {/* Empty state */}
-      {!loading && usersWithLocation === 0 && (
+      {!loading && filteredLocations.length === 0 && (
         <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
           <div className="bg-card/95 backdrop-blur-md rounded-xl p-6 shadow-lg border border-border/50 text-center">
             <Users className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-            <p className="text-sm font-medium">Nenhuma usuária com localização</p>
+            <p className="text-sm font-medium">Nenhuma usuária neste filtro</p>
             <p className="text-xs text-muted-foreground mt-1">
-              As usuárias aparecerão aqui quando compartilharem sua localização
+              Selecione outro estado ou "Todos" para ver os dados
             </p>
           </div>
         </div>
