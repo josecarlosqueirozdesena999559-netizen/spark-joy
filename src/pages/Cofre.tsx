@@ -73,7 +73,7 @@ const Cofre: React.FC = () => {
             <Plus className="w-4 h-4" />
             Adicionar Evidência
           </Button>
-          <GenerateReportButton items={items} decryptContent={decryptContent} />
+          <GenerateReportButton items={items} decryptContent={decryptContent} password={vaultPassword} />
         </div>
 
         {/* Items list */}
