@@ -14,20 +14,11 @@ interface StateCount {
 interface StateData {
   abbr: string;
   name: string;
-  region: 'norte' | 'nordeste' | 'centro-oeste' | 'sudeste' | 'sul';
   path: string;
   labelX: number;
   labelY: number;
 }
 
-// Light region colors (base)
-const REGION_COLORS = {
-  norte: '#A5D6A7',      // Light Green
-  nordeste: '#FFCDD2',   // Light Red/Pink
-  'centro-oeste': '#FFE0B2', // Light Orange
-  sudeste: '#FFF9C4',    // Light Yellow
-  sul: '#E1BEE7',        // Light Purple
-};
 
 // Heat colors based on user density (from white to dark pink)
 const HEAT_COLORS = [
@@ -48,41 +39,41 @@ const MAX_USERS_THRESHOLD = 300;
 // SVG paths for Brazilian states (simplified)
 const BRAZIL_STATES: StateData[] = [
   // Norte
-  { abbr: 'AC', name: 'Acre', region: 'norte', path: 'M45,195 L65,180 L85,185 L90,210 L70,225 L45,215 Z', labelX: 65, labelY: 200 },
-  { abbr: 'AM', name: 'Amazonas', region: 'norte', path: 'M85,120 L170,100 L210,120 L220,180 L190,210 L130,220 L90,210 L85,185 L65,180 L70,145 Z', labelX: 140, labelY: 160 },
-  { abbr: 'RR', name: 'Roraima', region: 'norte', path: 'M145,50 L190,45 L200,75 L180,100 L145,95 L130,70 Z', labelX: 165, labelY: 75 },
-  { abbr: 'AP', name: 'Amapá', region: 'norte', path: 'M280,45 L310,40 L325,70 L310,100 L275,95 L265,65 Z', labelX: 295, labelY: 70 },
-  { abbr: 'PA', name: 'Pará', region: 'norte', path: 'M210,100 L280,95 L310,100 L320,140 L340,170 L310,200 L250,210 L220,180 Z', labelX: 270, labelY: 150 },
-  { abbr: 'RO', name: 'Rondônia', region: 'norte', path: 'M130,220 L170,210 L185,240 L165,270 L125,265 L115,235 Z', labelX: 150, labelY: 245 },
-  { abbr: 'TO', name: 'Tocantins', region: 'norte', path: 'M310,200 L335,195 L350,250 L340,310 L305,305 L295,250 Z', labelX: 320, labelY: 255 },
+  { abbr: 'AC', name: 'Acre', path: 'M45,195 L65,180 L85,185 L90,210 L70,225 L45,215 Z', labelX: 65, labelY: 200 },
+  { abbr: 'AM', name: 'Amazonas', path: 'M85,120 L170,100 L210,120 L220,180 L190,210 L130,220 L90,210 L85,185 L65,180 L70,145 Z', labelX: 140, labelY: 160 },
+  { abbr: 'RR', name: 'Roraima', path: 'M145,50 L190,45 L200,75 L180,100 L145,95 L130,70 Z', labelX: 165, labelY: 75 },
+  { abbr: 'AP', name: 'Amapá', path: 'M280,45 L310,40 L325,70 L310,100 L275,95 L265,65 Z', labelX: 295, labelY: 70 },
+  { abbr: 'PA', name: 'Pará', path: 'M210,100 L280,95 L310,100 L320,140 L340,170 L310,200 L250,210 L220,180 Z', labelX: 270, labelY: 150 },
+  { abbr: 'RO', name: 'Rondônia', path: 'M130,220 L170,210 L185,240 L165,270 L125,265 L115,235 Z', labelX: 150, labelY: 245 },
+  { abbr: 'TO', name: 'Tocantins', path: 'M310,200 L335,195 L350,250 L340,310 L305,305 L295,250 Z', labelX: 320, labelY: 255 },
   
   // Nordeste
-  { abbr: 'MA', name: 'Maranhão', region: 'nordeste', path: 'M340,170 L385,140 L420,150 L425,200 L390,230 L350,225 L340,195 Z', labelX: 380, labelY: 185 },
-  { abbr: 'PI', name: 'Piauí', region: 'nordeste', path: 'M390,230 L420,215 L445,230 L450,290 L415,310 L385,290 L380,250 Z', labelX: 415, labelY: 265 },
-  { abbr: 'CE', name: 'Ceará', region: 'nordeste', path: 'M445,180 L490,175 L505,210 L485,245 L450,240 L445,210 Z', labelX: 475, labelY: 210 },
-  { abbr: 'RN', name: 'Rio Grande do Norte', region: 'nordeste', path: 'M505,195 L535,185 L545,210 L520,225 L505,215 Z', labelX: 525, labelY: 205 },
-  { abbr: 'PB', name: 'Paraíba', region: 'nordeste', path: 'M500,225 L545,220 L550,245 L505,250 Z', labelX: 525, labelY: 238 },
-  { abbr: 'PE', name: 'Pernambuco', region: 'nordeste', path: 'M450,250 L550,245 L555,275 L450,285 Z', labelX: 500, labelY: 265 },
-  { abbr: 'AL', name: 'Alagoas', region: 'nordeste', path: 'M520,285 L555,280 L560,305 L525,310 Z', labelX: 540, labelY: 295 },
-  { abbr: 'SE', name: 'Sergipe', region: 'nordeste', path: 'M510,310 L540,305 L545,330 L515,335 Z', labelX: 528, labelY: 320 },
-  { abbr: 'BA', name: 'Bahia', region: 'nordeste', path: 'M415,310 L510,300 L540,340 L500,420 L420,430 L380,380 L395,330 Z', labelX: 455, labelY: 365 },
+  { abbr: 'MA', name: 'Maranhão', path: 'M340,170 L385,140 L420,150 L425,200 L390,230 L350,225 L340,195 Z', labelX: 380, labelY: 185 },
+  { abbr: 'PI', name: 'Piauí', path: 'M390,230 L420,215 L445,230 L450,290 L415,310 L385,290 L380,250 Z', labelX: 415, labelY: 265 },
+  { abbr: 'CE', name: 'Ceará', path: 'M445,180 L490,175 L505,210 L485,245 L450,240 L445,210 Z', labelX: 475, labelY: 210 },
+  { abbr: 'RN', name: 'Rio Grande do Norte', path: 'M505,195 L535,185 L545,210 L520,225 L505,215 Z', labelX: 525, labelY: 205 },
+  { abbr: 'PB', name: 'Paraíba', path: 'M500,225 L545,220 L550,245 L505,250 Z', labelX: 525, labelY: 238 },
+  { abbr: 'PE', name: 'Pernambuco', path: 'M450,250 L550,245 L555,275 L450,285 Z', labelX: 500, labelY: 265 },
+  { abbr: 'AL', name: 'Alagoas', path: 'M520,285 L555,280 L560,305 L525,310 Z', labelX: 540, labelY: 295 },
+  { abbr: 'SE', name: 'Sergipe', path: 'M510,310 L540,305 L545,330 L515,335 Z', labelX: 528, labelY: 320 },
+  { abbr: 'BA', name: 'Bahia', path: 'M415,310 L510,300 L540,340 L500,420 L420,430 L380,380 L395,330 Z', labelX: 455, labelY: 365 },
   
   // Centro-Oeste
-  { abbr: 'MT', name: 'Mato Grosso', region: 'centro-oeste', path: 'M165,270 L250,260 L295,305 L285,380 L220,400 L170,370 L155,310 Z', labelX: 220, labelY: 330 },
-  { abbr: 'GO', name: 'Goiás', region: 'centro-oeste', path: 'M295,340 L380,330 L395,380 L380,430 L320,445 L290,410 L285,370 Z', labelX: 335, labelY: 385 },
-  { abbr: 'DF', name: 'Distrito Federal', region: 'centro-oeste', path: 'M365,365 L385,360 L390,380 L370,385 Z', labelX: 377, labelY: 372 },
-  { abbr: 'MS', name: 'Mato Grosso do Sul', region: 'centro-oeste', path: 'M220,400 L285,395 L300,445 L280,510 L210,505 L195,450 Z', labelX: 245, labelY: 455 },
+  { abbr: 'MT', name: 'Mato Grosso', path: 'M165,270 L250,260 L295,305 L285,380 L220,400 L170,370 L155,310 Z', labelX: 220, labelY: 330 },
+  { abbr: 'GO', name: 'Goiás', path: 'M295,340 L380,330 L395,380 L380,430 L320,445 L290,410 L285,370 Z', labelX: 335, labelY: 385 },
+  { abbr: 'DF', name: 'Distrito Federal', path: 'M365,365 L385,360 L390,380 L370,385 Z', labelX: 377, labelY: 372 },
+  { abbr: 'MS', name: 'Mato Grosso do Sul', path: 'M220,400 L285,395 L300,445 L280,510 L210,505 L195,450 Z', labelX: 245, labelY: 455 },
   
   // Sudeste
-  { abbr: 'MG', name: 'Minas Gerais', region: 'sudeste', path: 'M380,380 L500,420 L510,480 L450,520 L380,510 L340,455 L355,410 Z', labelX: 425, labelY: 455 },
-  { abbr: 'ES', name: 'Espírito Santo', region: 'sudeste', path: 'M510,420 L540,425 L545,480 L515,485 Z', labelX: 527, labelY: 450 },
-  { abbr: 'RJ', name: 'Rio de Janeiro', region: 'sudeste', path: 'M470,520 L530,505 L545,535 L490,555 Z', labelX: 510, labelY: 530 },
-  { abbr: 'SP', name: 'São Paulo', region: 'sudeste', path: 'M340,455 L450,520 L445,575 L365,590 L310,540 L305,480 Z', labelX: 375, labelY: 525 },
+  { abbr: 'MG', name: 'Minas Gerais', path: 'M380,380 L500,420 L510,480 L450,520 L380,510 L340,455 L355,410 Z', labelX: 425, labelY: 455 },
+  { abbr: 'ES', name: 'Espírito Santo', path: 'M510,420 L540,425 L545,480 L515,485 Z', labelX: 527, labelY: 450 },
+  { abbr: 'RJ', name: 'Rio de Janeiro', path: 'M470,520 L530,505 L545,535 L490,555 Z', labelX: 510, labelY: 530 },
+  { abbr: 'SP', name: 'São Paulo', path: 'M340,455 L450,520 L445,575 L365,590 L310,540 L305,480 Z', labelX: 375, labelY: 525 },
   
   // Sul
-  { abbr: 'PR', name: 'Paraná', region: 'sul', path: 'M305,545 L365,590 L355,640 L290,650 L265,600 Z', labelX: 315, labelY: 595 },
-  { abbr: 'SC', name: 'Santa Catarina', region: 'sul', path: 'M290,650 L355,645 L360,695 L300,705 Z', labelX: 325, labelY: 675 },
-  { abbr: 'RS', name: 'Rio Grande do Sul', region: 'sul', path: 'M260,710 L360,700 L365,770 L310,810 L245,780 Z', labelX: 305, labelY: 750 },
+  { abbr: 'PR', name: 'Paraná', path: 'M305,545 L365,590 L355,640 L290,650 L265,600 Z', labelX: 315, labelY: 595 },
+  { abbr: 'SC', name: 'Santa Catarina', path: 'M290,650 L355,645 L360,695 L300,705 Z', labelX: 325, labelY: 675 },
+  { abbr: 'RS', name: 'Rio Grande do Sul', path: 'M260,710 L360,700 L365,770 L310,810 L245,780 Z', labelX: 305, labelY: 750 },
 ];
 
 const MAIN_STATES = ['SP', 'RJ', 'MG', 'BA', 'CE', 'RS'];
@@ -185,18 +176,12 @@ const BrazilStatesMap: React.FC = () => {
 
   const getStateColor = (state: StateData): string => {
     const count = getStateCount(state.abbr);
-    const isSelected = filter === state.abbr;
     const isFiltered = filter !== 'all' && filter !== state.abbr;
     
     if (isFiltered) return '#F5F5F5';
     
-    // Use heat color based on user count
-    if (count > 0) {
-      return getHeatColor(count);
-    }
-    
-    // Default to light region color if no users
-    return REGION_COLORS[state.region];
+    // All states use the same heat color logic
+    return getHeatColor(count);
   };
 
   const getStateOpacity = (state: StateData): number => {
@@ -336,8 +321,8 @@ const BrazilStatesMap: React.FC = () => {
                 <path
                   d={state.path}
                   fill={getStateColor(state)}
-                  stroke="#FFFFFF"
-                  strokeWidth="2"
+                  stroke="#E0E0E0"
+                  strokeWidth="1.5"
                   opacity={getStateOpacity(state)}
                   className="transition-all duration-300 cursor-pointer"
                   onMouseEnter={() => setHoveredState(state.abbr)}
