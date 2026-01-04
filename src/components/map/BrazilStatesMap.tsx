@@ -20,21 +20,13 @@ interface StateData {
 }
 
 
-// Heat colors based on user density (from white to dark pink)
-const HEAT_COLORS = [
-  '#FAFAFA', // No users - almost white
-  '#FFF0F3', // Very few users - lightest pink
-  '#FCE4EC', // Few users - very light pink
-  '#F8BBD9', // Some users - light pink
-  '#F48FB1', // Moderate users - medium light pink
-  '#EC407A', // Many users - medium pink
-  '#D81B60', // High users - dark pink
-  '#AD1457', // Very high users - darker pink
-  '#880E4F', // Maximum users (300+) - darkest pink
-];
-
-// Maximum users threshold for darkest color
-const MAX_USERS_THRESHOLD = 300;
+// Heat colors based on user density
+const HEAT_COLORS = {
+  none: '#FAFAFA',      // 0 users - almost white
+  light: '#FCE4EC',     // 1-99 users - light pink
+  medium: '#EC407A',    // 100-299 users - medium pink
+  dark: '#880E4F',      // 300+ users - dark pink
+};
 
 // SVG paths for Brazilian states (simplified)
 const BRAZIL_STATES: StateData[] = [
@@ -167,11 +159,10 @@ const BrazilStatesMap: React.FC = () => {
   const maxCount = Math.max(...stateCounts.map(s => s.count), 1);
 
   const getHeatColor = (count: number): string => {
-    if (count === 0) return HEAT_COLORS[0];
-    // Use 300 as the threshold for maximum intensity
-    const normalizedCount = Math.min(count, MAX_USERS_THRESHOLD);
-    const intensity = Math.min(Math.floor((normalizedCount / MAX_USERS_THRESHOLD) * 8) + 1, 8);
-    return HEAT_COLORS[intensity];
+    if (count === 0) return HEAT_COLORS.none;
+    if (count < 100) return HEAT_COLORS.light;
+    if (count < 300) return HEAT_COLORS.medium;
+    return HEAT_COLORS.dark;
   };
 
   const getStateColor = (state: StateData): string => {
@@ -273,19 +264,18 @@ const BrazilStatesMap: React.FC = () => {
 
       {/* Heat Legend */}
       <div className="absolute bottom-24 left-4 z-10 bg-card/95 backdrop-blur-md rounded-xl p-3 shadow-lg border border-border/50">
-        <span className="text-xs font-medium mb-2 block">Intensidade de usuárias</span>
-        <div className="flex items-center gap-0.5 mb-1">
-          {HEAT_COLORS.map((color, i) => (
-            <div 
-              key={i} 
-              className="w-3 h-5 first:rounded-l last:rounded-r" 
-              style={{ backgroundColor: color }} 
-            />
-          ))}
+        <span className="text-xs font-medium mb-2 block">Usuárias por estado</span>
+        <div className="flex items-center gap-1 mb-1">
+          <div className="w-6 h-4 rounded" style={{ backgroundColor: HEAT_COLORS.none, border: '1px solid #E0E0E0' }} />
+          <div className="w-6 h-4 rounded" style={{ backgroundColor: HEAT_COLORS.light }} />
+          <div className="w-6 h-4 rounded" style={{ backgroundColor: HEAT_COLORS.medium }} />
+          <div className="w-6 h-4 rounded" style={{ backgroundColor: HEAT_COLORS.dark }} />
         </div>
         <div className="flex justify-between text-[9px] text-muted-foreground">
-          <span>Poucos</span>
-          <span>Muitos</span>
+          <span>0</span>
+          <span>1+</span>
+          <span>100+</span>
+          <span>300+</span>
         </div>
       </div>
 
