@@ -2,9 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Send, Shield, Clock, Trash2, MapPin, Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSupportChat, ChatMessage } from '@/hooks/useSupportChat';
 import BottomNav from '@/components/layout/BottomNav';
@@ -26,8 +24,9 @@ const Chat = () => {
   const { user } = useAuth();
   const { messages, isLoading, isInitializing, sendMessage, clearHistory } = useSupportChat();
   const [inputMessage, setInputMessage] = useState('');
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   useEffect(() => {
     if (!user) {
@@ -35,11 +34,34 @@ const Chat = () => {
     }
   }, [user, navigate]);
 
+  // Scroll to bottom when messages change
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // Handle virtual keyboard on mobile
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.visualViewport) {
+        const viewportHeight = window.visualViewport.height;
+        const windowHeight = window.innerHeight;
+        const newKeyboardHeight = windowHeight - viewportHeight;
+        setKeyboardHeight(newKeyboardHeight > 0 ? newKeyboardHeight : 0);
+      }
+    };
+
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', handleResize);
+      window.visualViewport.addEventListener('scroll', handleResize);
+    }
+
+    return () => {
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', handleResize);
+        window.visualViewport.removeEventListener('scroll', handleResize);
+      }
+    };
+  }, []);
 
   const handleSend = async () => {
     if (!inputMessage.trim() || isLoading) return;
@@ -68,9 +90,14 @@ const Chat = () => {
   if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-background flex flex-col pb-20">
+    <div 
+      className="fixed inset-0 bg-background flex flex-col"
+      style={{ 
+        paddingBottom: keyboardHeight > 0 ? keyboardHeight : 80 
+      }}
+    >
       {/* Header */}
-      <header className="bg-primary text-primary-foreground px-3 py-3 flex items-center gap-3 sticky top-0 z-10">
+      <header className="bg-primary text-primary-foreground px-3 py-3 flex items-center gap-3 flex-shrink-0 safe-area-top">
         <Button
           variant="ghost"
           size="icon"
@@ -113,40 +140,38 @@ const Chat = () => {
         </AlertDialog>
       </header>
 
-      {/* Security Banners */}
-      <div className="px-4 py-2 space-y-2">
-        <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-lg p-3 flex items-center gap-2">
+      {/* Info Banners - Collapsible on scroll */}
+      <div className="px-3 py-2 space-y-1.5 flex-shrink-0 bg-background">
+        <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-xl p-2.5 flex items-center gap-2">
           <Shield className="h-4 w-4 text-green-600 dark:text-green-400 flex-shrink-0" />
-          <p className="text-xs text-green-700 dark:text-green-300">
-            Suas conversas são criptografadas e privadas. Ninguém tem acesso aos seus dados.
+          <p className="text-[11px] text-green-700 dark:text-green-300 leading-tight">
+            Conversas criptografadas e privadas
           </p>
         </div>
-        <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-3 flex items-center gap-2">
-          <Clock className="h-4 w-4 text-amber-600 dark:text-amber-400 flex-shrink-0" />
-          <p className="text-xs text-amber-700 dark:text-amber-300">
-            Por segurança, o histórico do chat é excluído automaticamente após 24 horas.
-          </p>
+        <div className="flex gap-1.5">
+          <div className="flex-1 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-xl p-2 flex items-center gap-2">
+            <Clock className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+            <p className="text-[11px] text-amber-700 dark:text-amber-300 leading-tight">
+              Histórico expira em 24h
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={navigateToRadar}
+            className="border-primary/30 text-primary hover:bg-primary/5 rounded-xl h-auto py-2 px-3"
+          >
+            <MapPin className="h-3.5 w-3.5 mr-1" />
+            <span className="text-[11px]">Delegacias</span>
+          </Button>
         </div>
       </div>
 
-      {/* Radar Quick Access */}
-      <div className="px-4 py-2">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={navigateToRadar}
-          className="w-full border-primary/30 text-primary hover:bg-primary/5"
-        >
-          <MapPin className="h-4 w-4 mr-2" />
-          Encontrar delegacias próximas (Radar)
-        </Button>
-      </div>
-
-      {/* Chat Messages */}
-      <ScrollArea className="flex-1 px-4" ref={scrollRef}>
-        <div className="py-4 space-y-4">
+      {/* Messages Area */}
+      <div className="flex-1 overflow-y-auto px-3">
+        <div className="py-3 space-y-3 min-h-full flex flex-col">
           {isInitializing ? (
-            <div className="flex justify-center py-8">
+            <div className="flex-1 flex items-center justify-center">
               <div className="flex items-center gap-2 text-muted-foreground">
                 <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
                 <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
@@ -154,48 +179,53 @@ const Chat = () => {
               </div>
             </div>
           ) : (
-            messages.map((message) => (
-              <MessageBubble key={message.id} message={message} />
-            ))
-          )}
-          {isLoading && messages[messages.length - 1]?.role !== 'assistant' && (
-            <div className="flex justify-start">
-              <div className="bg-muted rounded-2xl rounded-bl-md px-4 py-3 max-w-[80%]">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                  <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                  <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+            <>
+              {messages.map((message) => (
+                <MessageBubble key={message.id} message={message} />
+              ))}
+              {isLoading && messages[messages.length - 1]?.role !== 'assistant' && (
+                <div className="flex justify-start">
+                  <div className="bg-muted rounded-2xl rounded-bl-sm px-4 py-3 max-w-[85%]">
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                      <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                      <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
+              )}
+            </>
           )}
+          <div ref={messagesEndRef} />
         </div>
-      </ScrollArea>
+      </div>
 
-      {/* Input Area */}
-      <div className="p-4 border-t bg-background sticky bottom-20">
-        <div className="flex gap-2 items-end">
-          <Textarea
-            ref={textareaRef}
+      {/* Input Area - Fixed at bottom, above keyboard */}
+      <div className="flex-shrink-0 p-3 pt-2 bg-background border-t border-border/50 safe-area-bottom">
+        <div className="flex gap-2 items-center bg-muted/50 rounded-full pl-4 pr-1.5 py-1.5">
+          <input
+            ref={inputRef}
+            type="text"
             value={inputMessage}
             onChange={(e) => setInputMessage(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Digite sua mensagem..."
-            className="min-h-[44px] max-h-32 resize-none"
-            rows={1}
+            className="flex-1 bg-transparent border-none outline-none text-sm placeholder:text-muted-foreground"
+            autoComplete="off"
           />
           <Button
             onClick={handleSend}
             disabled={!inputMessage.trim() || isLoading}
             size="icon"
-            className="h-11 w-11 flex-shrink-0"
+            className="h-9 w-9 rounded-full flex-shrink-0"
           >
-            <Send className="h-5 w-5" />
+            <Send className="h-4 w-4" />
           </Button>
         </div>
       </div>
 
-      <BottomNav />
+      {/* Bottom Nav - Only show when keyboard is hidden */}
+      {keyboardHeight === 0 && <BottomNav />}
     </div>
   );
 };
@@ -206,16 +236,16 @@ const MessageBubble = ({ message }: { message: ChatMessage }) => {
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
       <div
-        className={`rounded-2xl px-4 py-3 max-w-[80%] ${
+        className={`max-w-[85%] ${
           isUser
-            ? 'bg-primary text-primary-foreground rounded-br-md'
-            : 'bg-muted rounded-bl-md'
-        }`}
+            ? 'bg-primary text-primary-foreground rounded-2xl rounded-br-sm'
+            : 'bg-muted text-foreground rounded-2xl rounded-bl-sm'
+        } px-4 py-2.5 shadow-sm`}
       >
-        <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+        <p className="text-sm whitespace-pre-wrap leading-relaxed">{message.content}</p>
         <p
-          className={`text-[10px] mt-1 ${
-            isUser ? 'text-primary-foreground/70' : 'text-muted-foreground'
+          className={`text-[10px] mt-1 text-right ${
+            isUser ? 'text-primary-foreground/60' : 'text-muted-foreground'
           }`}
         >
           {new Date(message.created_at).toLocaleTimeString('pt-BR', {
